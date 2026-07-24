@@ -672,10 +672,16 @@
                 </div>
 
                 <h3 style="margin-top: 16px;">📱 Reader URL (For your phone)</h3>
-                <p>Open this on your phone to read the live supertips.</p>
-                <div class="url-row">
+                <p>Open this on your phone to read the live supertips. The URL is long because it contains your secure token.</p>
+                <div class="url-row" style="margin-bottom: 12px;">
                     <input type="text" id="reader-url" readonly>
                     <button onclick="copyUrl('reader-url')">Copy</button>
+                </div>
+                
+                <!-- QR Code Box -->
+                <div style="background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; text-align: center; margin-top: 10px;">
+                    <p style="font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 8px;">Quickest way: Scan this with your phone's camera!</p>
+                    <img id="reader-qr" src="" alt="QR Code" style="display: none; margin: 0 auto; border-radius: 8px; width: 150px; height: 150px;">
                 </div>
             </div>
 
@@ -799,6 +805,11 @@
         });
         const readerUrl = `${base}/reader.html?${readerParams.toString()}`;
         document.getElementById('reader-url').value = readerUrl;
+        
+        // Generate QR code for the phone reader
+        const qrImg = document.getElementById('reader-qr');
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(readerUrl)}&bgcolor=131322&color=f0f0f8`;
+        qrImg.style.display = 'block';
     }
 
     function copyUrl(inputId) {
