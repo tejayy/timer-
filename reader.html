@@ -432,16 +432,59 @@
   // ── Init ──
   loadItems();
 
-  // ── StreamElements WebSocket ──
+  // ── StreamElements WebSocket & History ──
   const P = new URLSearchParams(location.search);
   const channelId = P.get('id') || '';
   const token = P.get('token') || '';
+
+  async function fetchHistory() {
+    if (!channelId || !token) return;
+    try {
+      const res = await fetch(`https://api.streamelements.com/kappa/v2/activities/${channelId}?limit=100&types=tip`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const json = await res.json();
+      const arr = Array.isArray(json) ? json : (json.docs || []);
+      
+      let added = false;
+      // Reverse to add oldest first so unshift puts newest at the top
+      arr.reverse().forEach(act => {
+        if (act.type === 'tip') {
+          const data = act.data || {};
+          const amount = data.amount || 0;
+          if (amount <= 0) return;
+
+          const _id = act._id || String(act.createdAt);
+          if (!items.find(i => i._id === _id)) {
+            const name = data.username || data.name || 'Anonymous';
+            const message = data.message || '';
+            const currency = data.currency || 'INR';
+            const ts = act.createdAt ? new Date(act.createdAt).getTime() : Date.now();
+            
+            items.unshift({ _id, type: 'st', name, amount, message, currency, ts });
+            added = true;
+          }
+        }
+      });
+      
+      if (added) {
+        if (items.length > MAX_ITEMS) items.length = MAX_ITEMS;
+        saveItems();
+        renderAll();
+      }
+    } catch (e) {
+      console.error('Failed to fetch history', e);
+    }
+  }
 
   (function connect() {
     if (!channelId || !token) {
       document.getElementById('status').textContent = 'No ID/Token';
       return;
     }
+
+    // Fetch history on load
+    fetchHistory();
 
     const ws = new WebSocket('wss://astro.streamelements.com');
 
@@ -489,12 +532,14 @@
       const name = data.username || data.name || 'Anonymous';
       const message = data.message || '';
       const currency = data.currency || 'INR';
+      const _id = d._id || String(Date.now());
 
       // Ensure we have an amount
       if (amount <= 0) return;
+      if (items.find(i => i._id === _id)) return; // prevent dupes
 
       if (type === 'tip') {
-        addItem({ type: 'st', name, amount, message, currency, ts: Date.now() });
+        addItem({ _id, type: 'st', name, amount, message, currency, ts: Date.now() });
       }
       // Ignored superchats for now
     } else if (msg.topic === 'channel.tips') {
@@ -503,9 +548,10 @@
       const name = data.username || data.name || 'Anonymous';
       const message = data.message || '';
       const currency = data.currency || 'INR';
+      const _id = d._id || String(Date.now());
       
-      if (amount > 0) {
-        addItem({ type: 'st', name, amount, message, currency, ts: Date.now() });
+      if (amount > 0 && !items.find(i => i._id === _id)) {
+        addItem({ _id, type: 'st', name, amount, message, currency, ts: Date.now() });
       }
     }
   }
