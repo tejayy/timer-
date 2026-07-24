@@ -665,10 +665,17 @@
             <!-- OBS URL -->
             <div class="url-card" id="obs-section" style="display: none;">
                 <h3>🖥️ OBS Browser Source URL</h3>
-                <p>Add as Browser Source in OBS. Width: <strong>800</strong>, Height: <strong>220</strong> (timer + bar). Set <strong>300</strong> to include controls.</p>
-                <div class="url-row">
+                <p>Add as Browser Source in OBS. Width: <strong>800</strong>, Height: <strong>220</strong> (timer + bar).</p>
+                <div class="url-row" style="margin-bottom: 12px;">
                     <input type="text" id="obs-url" readonly>
-                    <button onclick="copyUrl()">Copy</button>
+                    <button onclick="copyUrl('obs-url')">Copy</button>
+                </div>
+
+                <h3 style="margin-top: 16px;">📱 Reader URL (For your phone)</h3>
+                <p>Open this on your phone to read the live supertips.</p>
+                <div class="url-row">
+                    <input type="text" id="reader-url" readonly>
+                    <button onclick="copyUrl('reader-url')">Copy</button>
                 </div>
             </div>
 
@@ -782,16 +789,25 @@
             countup: config.countup ? '1' : '0',
             autostart: config.autostart ? '1' : '0',
         });
-        const url = `${base}/overlay.html?${params.toString()}`;
-        document.getElementById('obs-url').value = url;
+        
+        const obsUrl = `${base}/overlay.html?${params.toString()}`;
+        document.getElementById('obs-url').value = obsUrl;
+
+        const readerParams = new URLSearchParams({
+            id: config.channelId,
+            token: config.token
+        });
+        const readerUrl = `${base}/reader.html?${readerParams.toString()}`;
+        document.getElementById('reader-url').value = readerUrl;
     }
 
-    function copyUrl() {
-        const inp = document.getElementById('obs-url');
+    function copyUrl(inputId) {
+        const inp = document.getElementById(inputId);
         navigator.clipboard.writeText(inp.value).then(() => {
             const btn = inp.nextElementSibling;
+            const originalText = btn.textContent;
             btn.textContent = 'Copied!';
-            setTimeout(() => btn.textContent = 'Copy', 2000);
+            setTimeout(() => btn.textContent = originalText, 2000);
         });
     }
 
