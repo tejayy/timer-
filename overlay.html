@@ -2,637 +2,625 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Marathon Timer — OBS Overlay</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;900&display=swap" rel="stylesheet">
+<title>Marathon Timer</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-html { overflow:hidden; }
+
 body {
-  width:800px; height:200px;
   background:transparent;
+  font-family:'Roboto Condensed', sans-serif;
+  padding:12px;
+  width:100vw;
+  overflow:hidden;
+}
+
+.card {
+  padding:18px 20px 20px;
+  position:relative;
+}
+
+/* ── Timer row ── */
+.timer-row {
+  margin-bottom:14px;
+  text-align:center;
+  position:relative;
+}
+
+.timer-display {
+  font-family:'Orbitron', sans-serif;
+  font-size:88px;
+  font-weight:900;
+  letter-spacing:0.04em;
+  color:#fff;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
   display:flex;
   align-items:center;
   justify-content:center;
 }
 
-/* ── Pill position wrapper ── */
-.pill-pos {
-  position:absolute;
-  width:660px;
-  left:70px;
-}
-
-/* ════════════════════════════════════════════════
-   CARD / PILL STYLES — from alert_v3
-   ════════════════════════════════════════════════ */
-
-.alert {
-  --x: 90px;
-  position:relative;
-  transform:translateX(var(--x));
-  opacity:0;
-  transition:transform .9s cubic-bezier(.18,.9,.25,1), opacity .6s ease;
-}
-.alert.show { --x:0; opacity:1; }
-.alert.hide {
-  --x:-90px; opacity:0;
-  transition:transform .8s cubic-bezier(.55,0,.45,1), opacity .6s ease;
-}
-
-.card-wrap {
-  position:relative;
-  border-radius:37px;
+.timer-hours-wrap {
   overflow:hidden;
-}
-
-.card-wrap.effect {
-  border-radius:37px;
-  overflow:visible;
-}
-
-.card-wrap.effect::before {
-  content:'';
-  position:absolute;
-  inset:-4px;
-  border-radius:41px;
-  background:
-    radial-gradient(
-      circle 130px at var(--spot-x,50%) var(--spot-y,-50px),
-      rgba(255,255,255,0.98) 0%,
-      rgba(255,255,255,0.55) 34%,
-      transparent 64%
-    ),
-    linear-gradient(
-      to bottom,
-      rgba(255,255,255,0.38) 0%,
-      rgba(255,255,255,0.06) 50%,
-      rgba(0,0,0,0.06) 100%
-    ),
-    var(--shade);
-  box-shadow:0 0 0 1px rgba(255,255,255,0.25);
-  z-index:0;
-}
-
-.card-wrap.effect.glow::before {
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.25),
-    0 0 22px var(--glow),
-    0 0 50px var(--glow-far),
-    0 0 90px var(--glow-far);
-}
-
-.card {
-  background:var(--primary);
-  height:74px;
-  border-radius:37px;
-  overflow:hidden;
-  position:relative;
-  z-index:1;
-}
-
-.card-wrap.effect > .card {
-  border-radius:37px;
-  box-shadow:inset 0 0 22px 8px var(--glow);
-}
-
-.header {
-  height:74px;
-  display:flex;
+  height:1em;
+  display:inline-flex;
   align-items:center;
   position:relative;
 }
 
-.header::before {
-  content:'';
-  position:absolute; inset:0; z-index:1;
-  pointer-events:none;
-  background:radial-gradient(
-    ellipse 80% 75% at var(--spot-x,50%) var(--spot-y,-200px),
-    rgba(255,255,255,0.26) 0%,
-    rgba(255,255,255,0.06) 50%,
-    transparent 75%
-  );
+.timer-hours { display:inline-block; }
+
+@keyframes hourTickUp {
+  0%   { transform:translateY(0);    opacity:1; }
+  38%  { transform:translateY(-90%); opacity:0; }
+  39%  { transform:translateY(90%);  opacity:0; }
+  100% { transform:translateY(0);    opacity:1; }
 }
 
-.progress {
-  position:absolute; inset:0;
-  background:var(--shade);
-  clip-path:inset(0 100% 0 0);
-  transition:clip-path 1s linear;
+.timer-display.ending {
+  animation:urgentPulse 0.8s ease-in-out infinite;
 }
 
-.content {
-  position:relative; z-index:2;
-  display:flex; align-items:center;
-  width:100%; color:var(--text);
+@keyframes urgentPulse {
+  0%,100% { text-shadow:0 0 30px rgba(255,60,60,0.70); color:#ff6060; }
+  50%     { text-shadow:0 0 60px rgba(255,60,60,1);     color:#fff;    }
 }
 
-.iconWrap {
-  width:74px; height:74px;
-  display:flex; align-items:center; justify-content:center;
-  flex-shrink:0;
+/* ── Progress section ── */
+.progress-label-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:10px;
 }
 
-.avatar {
-  width:48px; height:48px;
-  border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-  font-size:22px; font-weight:900;
+.progress-title {
+  font-size:24px;
+  font-weight:900;
+  letter-spacing:0.18em;
   color:#fff;
-  font-family:'Roboto Condensed',sans-serif;
+  text-transform:uppercase;
 }
 
-.name {
-  flex:1;
-  font-size:30px; font-weight:900;
-  padding-left:4px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  font-family:'Roboto Condensed',sans-serif;
-  letter-spacing:1.5px;
+.progress-amounts {
+  font-size:24px;
+  font-weight:900;
+  color:#fff;
+  letter-spacing:0.04em;
 }
 
-.timer-val {
-  width:250px;
-  text-align:center;
-  font-size:36px; font-weight:900;
-  font-family:'Roboto Condensed',sans-serif;
-  letter-spacing:3px;
-  flex-shrink:0;
+/* ── Bar track ── */
+.bar-track {
+  position:relative;
+  height:28px;
+  border-radius:6px;
+  background:rgba(0,0,0,0.50);
+  border:2px solid rgba(255,255,255,1);
+  overflow:hidden;
 }
 
-/* Tip pill uses .amount class */
-.amount {
-  width:220px;
-  text-align:center;
-  font-size:28px; font-weight:900;
-  font-family:'Roboto Condensed',sans-serif;
-  flex-shrink:0;
-}
-
-/* ── Particles ── */
-.particles-layer {
-  position:absolute; inset:0;
-  pointer-events:none; overflow:visible; z-index:20;
-}
-
-.particle {
-  position:absolute; border-radius:50%; opacity:0;
-  animation:p-rise var(--dur) var(--delay) ease-out infinite;
-}
-
-@keyframes p-rise {
-  0%   { transform:translate(0,0) scale(1);               opacity:0; }
-  10%  { opacity:var(--pk,0.9); }
-  75%  { opacity:calc(var(--pk,0.9)*0.5); }
-  100% { transform:translate(var(--dx),var(--dy)) scale(0); opacity:0; }
-}
-
-/* ── Tip notification pill stacking ── */
-.tip-slot {
+.bar-ghost {
   position:absolute;
-  width:660px;
-  left:70px;
-  transition:top 0.4s cubic-bezier(0.25,1,0.5,1);
+  left:0; top:0; bottom:0;
+  width:0%;
+  border-radius:6px;
+  background:linear-gradient(90deg,#c0006a,#ff2d8a,#ff6ec7);
+  opacity:0.90;
+  transition:width 0.27s ease-in-out;
 }
 
-/* ── Flash overlay ── */
-.flash-overlay {
-  position:absolute; inset:0;
-  border-radius:37px;
-  opacity:0; pointer-events:none; z-index:28;
+.bar-fill {
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width:0%;
+  border-radius:6px;
+  background:linear-gradient(90deg,#A641F2,#c070ff,#d9a0ff);
+  background-size:200% 100%;
+  animation:barShimmer 6s ease-in-out infinite;
+  transition:width 1.7s ease-in-out;
 }
 
-/* ── Colon blink when paused / ended ── */
-.timer-val.blink .colon {
-  animation:colonBlink 1s step-end infinite;
+.bar-fill::after {
+  content:'';
+  position:absolute;
+  right:0; top:0; bottom:0;
+  width:40px;
+  background:linear-gradient(90deg,transparent,rgba(200,150,255,0.60));
+  border-radius:0 6px 6px 0;
+  pointer-events:none;
 }
 
-@keyframes colonBlink {
+.bar-ghost::after {
+  content:'';
+  position:absolute;
+  right:0; top:0; bottom:0;
+  width:30px;
+  background:linear-gradient(90deg,transparent,rgba(255,120,200,0.75));
+  border-radius:0 6px 6px 0;
+  pointer-events:none;
+}
+
+@keyframes barShimmer {
+  0%   { background-position:0% 0;   }
+  50%  { background-position:100% 0; }
+  100% { background-position:0% 0;   }
+}
+
+/* ── Bonus badge ── */
+.bonus-badge {
+  position:absolute;
+  right:0; top:50%;
+  transform:translateY(-50%) scale(0.4) rotate(-8deg);
+  font-family:'Roboto Condensed', sans-serif;
+  font-size:56px;
+  font-weight:900;
+  color:#22c55e;
+  letter-spacing:0.04em;
+  opacity:0;
+  pointer-events:none;
+  white-space:nowrap;
+  text-shadow:none;
+  border:none; padding:0;
+}
+
+.bonus-badge.pop {
+  animation:stampPop 2.2s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+
+@keyframes stampPop {
+  0%   { opacity:0; transform:translateY(-50%) scale(0.3)  rotate(-12deg); }
+  12%  { opacity:1; transform:translateY(-50%) scale(1.18) rotate(-6deg);  }
+  22%  { opacity:1; transform:translateY(-50%) scale(0.95) rotate(-2deg);  }
+  30%  { opacity:1; transform:translateY(-50%) scale(1.04) rotate(-4deg);  }
+  45%  { opacity:1; transform:translateY(-50%) scale(1.0)  rotate(-4deg);  }
+  75%  { opacity:1; transform:translateY(-50%) scale(1.0)  rotate(-4deg);  }
+  100% { opacity:0; transform:translateY(-65%) scale(0.9)  rotate(-4deg);  }
+}
+
+.bar-flash-overlay {
+  position:absolute;
+  left:0; top:0; bottom:0; width:100%;
+  border-radius:6px;
+  opacity:0;
+  pointer-events:none;
+}
+
+/* ── Controls ── */
+.controls {
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.ctrl-btn {
+  font-family:'Roboto Condensed', sans-serif;
+  font-size:15px;
+  font-weight:900;
+  letter-spacing:0.10em;
+  text-transform:uppercase;
+  padding:9px 18px;
+  border-radius:8px;
+  border:2px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.06);
+  color:rgba(255,255,255,0.75);
+  cursor:pointer;
+  transition:background 0.15s, border-color 0.15s, transform 0.1s;
+  white-space:nowrap;
+}
+
+.ctrl-btn:hover  { background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.30); color:#fff; }
+.ctrl-btn:active { transform:scale(0.96); }
+
+.ctrl-btn.start-btn {
+  border-color:rgba(160,80,255,0.60);
+  background:rgba(120,40,255,0.22);
+  color:#fff; flex:1;
+}
+.ctrl-btn.start-btn:hover   { background:rgba(140,60,255,0.38); border-color:rgba(180,100,255,0.85); }
+.ctrl-btn.start-btn.running { border-color:rgba(255,80,80,0.60); background:rgba(180,20,20,0.22); }
+
+.ctrl-btn.add-hr  { border-color:rgba(80,220,120,0.50); color:#4ade80; }
+.ctrl-btn.add-hr:hover  { background:rgba(40,160,80,0.18); border-color:rgba(80,220,120,0.85); }
+
+.ctrl-btn.rem-hr  { border-color:rgba(255,100,80,0.50); color:#f87171; }
+.ctrl-btn.rem-hr:hover  { background:rgba(180,40,20,0.18); border-color:rgba(255,100,80,0.85); }
+
+/* ── SE status dot ── */
+.se-status {
+  position:absolute;
+  top:12px; right:20px;
+  display:flex; align-items:center; gap:6px;
+  font-size:12px; font-weight:700;
+  color:rgba(255,255,255,0.4);
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+
+.se-dot {
+  width:8px; height:8px;
+  border-radius:50%;
+  background:#555;
+  transition:background 0.3s;
+}
+
+.se-dot.live    { background:#22c55e; box-shadow:0 0 8px rgba(34,197,94,0.6); }
+.se-dot.trying  { background:#f59e0b; animation:dotPulse 1s ease infinite; }
+.se-dot.dead    { background:#ef4444; }
+
+@keyframes dotPulse {
   0%,100% { opacity:1; }
-  50%     { opacity:0.2; }
+  50%     { opacity:0.3; }
 }
 </style>
 </head>
 <body>
 
-<!-- ═══ Timer Pill — always visible ═══ -->
-<div class="pill-pos" id="timer-pill" style="top:63px;">
-  <div class="alert show" id="timer-alert">
-    <div class="card-wrap effect glow" id="timer-wrap">
-      <div class="card" id="timer-card">
-        <div class="header">
-          <div class="progress" id="timer-progress"></div>
-          <div class="content">
-            <div class="iconWrap">
-              <div class="avatar" id="timer-avatar" style="background:#7c3aed;">⏱</div>
-            </div>
-            <div class="name">MARATHON</div>
-            <div class="timer-val" id="timer-digits">00:00:00</div>
-          </div>
-        </div>
-        <div class="flash-overlay" id="timer-flash"></div>
-      </div>
+<div class="card">
+  <!-- SE connection indicator -->
+  <div class="se-status" id="seStatus" style="display:none;">
+    <span class="se-dot" id="seDot"></span>
+    <span id="seLabel">SE</span>
+  </div>
+
+  <!-- Timer -->
+  <div class="timer-row">
+    <div class="timer-display" id="timerDisplay">
+      <span class="timer-hours-wrap"><span class="timer-hours" id="timerHours">01</span></span><span id="timerMinSec">:00:00</span>
     </div>
-    <div class="particles-layer" id="timer-particles"></div>
+    <div class="bonus-badge" id="bonusBadge">+1 HR</div>
+  </div>
+
+  <!-- Progress label + amounts -->
+  <div class="progress-label-row">
+    <div class="progress-title" id="progressTitle">+1 HR</div>
+    <div class="progress-amounts">
+      <span id="collected">₹0</span>
+      <span id="goalLabel" style="color:#fff"> / ₹10,000</span>
+    </div>
+  </div>
+
+  <!-- Bar -->
+  <div class="bar-track">
+    <div class="bar-ghost" id="barGhost"></div>
+    <div class="bar-fill"  id="barFill"></div>
+    <div class="bar-flash-overlay" id="barFlashOverlay"></div>
   </div>
 </div>
 
-<!-- ═══ Tip notification pills go here ═══ -->
-<div id="tip-container"></div>
+<!-- Controls -->
+<div class="controls">
+  <button class="ctrl-btn add-hr" id="addBtn" onclick="manualAdd()">+1 HR</button>
+  <button class="ctrl-btn start-btn" id="startBtn" onclick="toggleTimer()">START</button>
+  <button class="ctrl-btn rem-hr" onclick="resetAll()" style="background:#7f1d1d">⟳ RESET</button>
+  <button class="ctrl-btn rem-hr" id="remBtn" onclick="manualRemove()">−1 HR</button>
+</div>
 
 <script>
 /* ════════════════════════════════════════════════════════
-   CONFIG — URL params or localStorage
+   CONFIG — from URL params or defaults
    ════════════════════════════════════════════════════════ */
-const params = new URLSearchParams(location.search);
-let config = {};
+const P = new URLSearchParams(location.search);
 
-function loadConfig() {
-  if (params.has('id') && params.has('token')) {
-    config = {
-      channelId:    params.get('id'),
-      token:        params.get('token'),
-      tipAmount:    parseFloat(params.get('amount')) || 10000,
-      timePer:      parseInt(params.get('time'))     || 3600,
-      proportional: params.get('prop')    !== '0',
-      stack:        params.get('stack')   !== '0',
-      countup:      params.get('countup') === '1',
-    };
-    return true;
-  }
-  try {
-    const s = JSON.parse(localStorage.getItem('marathon_v2') || '{}');
-    if (s.channelId && s.token) {
-      config = {
-        channelId: s.channelId, token: s.token,
-        tipAmount: s.tipAmount||10000, timePer: s.timePer||3600,
-        proportional: s.proportional!==false, stack: s.stack!==false,
-        countup: s.countup||false,
-      };
-      return true;
-    }
-  } catch {}
-  return false;
-}
-
-/* ════════════════════════════════════════════════════════
-   TIERS — for tip notification pill colors
-   ════════════════════════════════════════════════════════ */
-const TIERS = [
-  { min:10000, primary:"#b21414", shade:"#e62117", text:"#ffffff",
-    effect:3, glow:"rgba(230,33,23,0.90)", glowFar:"rgba(230,33,23,0.42)" },
-  { min:5000,  primary:"#b21414", shade:"#e62117", text:"#ffffff",
-    effect:2, glow:"rgba(230,33,23,0.78)", glowFar:"rgba(230,33,23,0.33)" },
-  { min:2000,  primary:"#b21414", shade:"#e62117", text:"#ffffff",
-    effect:2, glow:"rgba(230,33,23,0.78)", glowFar:"rgba(230,33,23,0.33)" },
-  { min:1000,  primary:"#cc1b46", shade:"#e91e63", text:"#ffffff",
-    effect:1, glow:"rgba(233,30,99,0.72)", glowFar:"rgba(233,30,99,0.30)" },
-  { min:500,   primary:"#e26203", shade:"#f57c01", text:"#ffffff", effect:0 },
-  { min:200,   primary:"#e2a307", shade:"#fdd835", text:"#000000", effect:0 },
-  { min:100,   primary:"#19bfa0", shade:"#1de9b6", text:"#000000", effect:0 },
-  { min:40,    primary:"#00b6e0", shade:"#01e5ff", text:"#000000", effect:0 },
-  { min:0,     primary:"#0a3572", shade:"#0d47a0", text:"#ffffff", effect:0 },
-];
-const tierFor = a => TIERS.find(t => a >= t.min);
-
-const AVATAR_COLORS = ["#f44336","#e91e63","#9c27b0","#3f51b5","#2196f3",
-                        "#009688","#4caf50","#ff9800","#795548","#607d8b"];
-function avatarColor(n) {
-  let h=0; for(let i=0;i<n.length;i++) h=n.charCodeAt(i)+((h<<5)-h);
-  return AVATAR_COLORS[Math.abs(h)%AVATAR_COLORS.length];
-}
-
-/* ════════════════════════════════════════════════════════
-   TIMER STATE
-   ════════════════════════════════════════════════════════ */
-let remainingSeconds = 0;
-let running = false;
-let countInterval = null;
-
-// Timer pill theme
-const TIMER_THEME = {
-  primary:  "#0c0820",
-  shade:    "#1a1040",
-  text:     "#ffffff",
-  glow:     "rgba(139,92,246,0.75)",
-  glowFar:  "rgba(139,92,246,0.32)",
+const CFG = {
+  channelId : P.get('id')    || '',
+  token     : P.get('token') || '',
+  goal      : parseFloat(P.get('goal'))    || 10000,
+  timePer   : parseInt(P.get('timePer'))   || 3600,
+  startH    : parseInt(P.get('startH'))    || 1,
+  startM    : parseInt(P.get('startM'))    || 0,
+  startS    : parseInt(P.get('startS'))    || 0,
+  countup   : P.get('countup') === '1',
+  autostart : P.get('autostart') === '1',
 };
 
-function applyTimerTheme() {
-  const el = document.getElementById('timer-alert');
-  el.style.setProperty('--primary',  TIMER_THEME.primary);
-  el.style.setProperty('--shade',    TIMER_THEME.shade);
-  el.style.setProperty('--text',     TIMER_THEME.text);
-  el.style.setProperty('--glow',     TIMER_THEME.glow);
-  el.style.setProperty('--glow-far', TIMER_THEME.glowFar);
+const START_SECS = CFG.startH * 3600 + CFG.startM * 60 + CFG.startS;
+const GOAL       = CFG.goal;
+const TIME_PER   = CFG.timePer;
+
+/* ── Dynamic labels ── */
+function friendlyTimeLabel(secs) {
+  if (secs >= 3600 && secs % 3600 === 0) {
+    const h = secs / 3600;
+    return h + ' HR';
+  }
+  if (secs >= 60) return Math.floor(secs / 60) + ' MIN';
+  return secs + ' SEC';
 }
 
-function loadTimerState() {
+const TIME_LABEL = friendlyTimeLabel(TIME_PER);
+
+// Set labels
+document.getElementById('progressTitle').textContent = '+' + TIME_LABEL;
+document.getElementById('goalLabel').textContent = ' / ₹' + GOAL.toLocaleString('en-IN');
+document.getElementById('addBtn').textContent = '+' + TIME_LABEL;
+document.getElementById('remBtn').textContent = '−' + TIME_LABEL;
+
+/* ════════════════════════════════════════════════════════
+   STATE (localStorage persisted)
+   ════════════════════════════════════════════════════════ */
+function loadState() {
   try {
-    const s = JSON.parse(localStorage.getItem('marathon_timer_state') || '{}');
-    if (s.remainingSeconds != null && s.timestamp) {
-      const elapsed = Math.floor((Date.now() - s.timestamp) / 1000);
-      remainingSeconds = s.remainingSeconds - elapsed;
-      running = s.running !== false;
-      if (!config.countup && remainingSeconds < 0) remainingSeconds = 0;
-      return true;
-    }
-  } catch {}
-  return false;
+    const s = JSON.parse(localStorage.getItem('marathonTimerV3') || '{}');
+    return {
+      endTime:   s.endTime   || null,
+      pausedAt:  s.pausedAt  || null,
+      remaining: s.remaining != null ? s.remaining : START_SECS,
+      collected: s.collected || 0,
+    };
+  } catch {
+    return { endTime:null, pausedAt:null, remaining:START_SECS, collected:0 };
+  }
 }
 
-function syncFromStorage() {
-  try {
-    const s = JSON.parse(localStorage.getItem('marathon_timer_state') || '{}');
-    if (s.remainingSeconds != null && s.timestamp) {
-      const elapsed = Math.floor((Date.now() - s.timestamp) / 1000);
-      const newVal  = s.remainingSeconds - elapsed;
-      running = s.running !== false;
+function saveState() {
+  localStorage.setItem('marathonTimerV3', JSON.stringify({
+    endTime:   state.endTime,
+    pausedAt:  state.pausedAt,
+    remaining: state.remaining,
+    collected: state.collected,
+  }));
+}
 
-      // Detect time added (tip came in from config page)
-      if (newVal > remainingSeconds + 2) {
-        const added = newVal - remainingSeconds;
-        showTimerFlash();
-      }
+let state = loadState();
+let tickInterval = null;
 
-      remainingSeconds = newVal;
-      if (!config.countup && remainingSeconds < 0) remainingSeconds = 0;
-    }
-  } catch {}
+/* ════════════════════════════════════════════════════════
+   TIMER LOGIC
+   ════════════════════════════════════════════════════════ */
+function getRemaining() {
+  if (state.endTime && !state.pausedAt) {
+    const r = Math.round((state.endTime - Date.now()) / 1000);
+    return CFG.countup ? r : Math.max(0, r);
+  }
+  return state.remaining;
+}
+
+function toggleTimer() {
+  const btn = document.getElementById('startBtn');
+  if (!state.endTime && !state.pausedAt) {
+    // Fresh start
+    state.endTime  = Date.now() + state.remaining * 1000;
+    state.pausedAt = null;
+    btn.textContent = 'PAUSE';
+    btn.classList.add('running');
+  } else if (state.endTime && !state.pausedAt) {
+    // Pause
+    state.remaining = getRemaining();
+    state.pausedAt  = Date.now();
+    state.endTime   = null;
+    btn.textContent = 'RESUME';
+    btn.classList.remove('running');
+  } else if (state.pausedAt) {
+    // Resume
+    state.endTime  = Date.now() + state.remaining * 1000;
+    state.pausedAt = null;
+    btn.textContent = 'PAUSE';
+    btn.classList.add('running');
+  }
+  saveState();
+}
+
+function addTimeUnit() {
+  const rem = getRemaining();
+  state.remaining = rem + TIME_PER;
+  if (state.endTime && !state.pausedAt) {
+    state.endTime = Date.now() + state.remaining * 1000;
+  }
+  saveState();
+}
+
+function removeTimeUnit() {
+  const rem = getRemaining();
+  state.remaining = Math.max(0, rem - TIME_PER);
+  if (state.endTime && !state.pausedAt) {
+    state.endTime = Date.now() + state.remaining * 1000;
+  }
+  saveState();
+}
+
+function manualAdd()    { addTimeUnit(); }
+function manualRemove() { removeTimeUnit(); }
+
+/* ════════════════════════════════════════════════════════
+   HOUR-TICK ANIMATION
+   ════════════════════════════════════════════════════════ */
+let tickingHours = false;
+
+async function tickUnits(count) {
+  const el = document.getElementById('timerHours');
+  tickingHours = true;
+  for (let i = 0; i < count; i++) {
+    addTimeUnit();
+    const h = Math.floor(getRemaining() / 3600);
+    el.style.animation = 'none';
+    void el.offsetWidth;
+    el.style.animation = 'hourTickUp 0.22s cubic-bezier(0.4,0,0.2,1) forwards';
+    await delay(110);
+    el.textContent = String(h).padStart(2, '0');
+    await delay(130);
+  }
+  el.style.animation = '';
+  tickingHours = false;
 }
 
 /* ════════════════════════════════════════════════════════
-   DISPLAY
+   PROGRESS BAR + AMOUNT TRACKING
    ════════════════════════════════════════════════════════ */
-function render() {
-  const neg = remainingSeconds < 0;
-  const abs = Math.abs(remainingSeconds);
+let animating = false;
+const animQueue = [];
+
+function addAmount(amount) {
+  animQueue.push(Number(amount));
+  if (!animating) drainQueue();
+}
+
+async function drainQueue() {
+  if (animating || animQueue.length === 0) return;
+  animating = true;
+  while (animQueue.length > 0) {
+    const amount = animQueue.shift();
+    await animateAmount(amount);
+  }
+  animating = false;
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setGhost(pct, reset = false) {
+  const g = document.getElementById('barGhost');
+  g.style.transition = reset ? 'none' : 'width 0.55s ease-in-out';
+  if (reset) void g.offsetWidth;
+  g.style.width = pct + '%';
+}
+
+function setFill(pct, animated = true) {
+  const f = document.getElementById('barFill');
+  f.style.transition = animated ? 'width 1.7s ease-in-out' : 'none';
+  f.style.width = pct + '%';
+  if (!animated) void f.offsetWidth;
+}
+
+async function animateAmount(amount) {
+  let carry = state.collected + amount;
+
+  if (carry < GOAL) {
+    // Simple gain — no overflow
+    state.collected = carry;
+    saveState();
+    const pct = (carry / GOAL) * 100;
+    setGhost(pct);
+    await delay(160);
+    setFill(pct);
+    updateLabel();
+    await delay(1900);
+    return;
+  }
+
+  // Count overflows
+  let bonuses = 0;
+  let rem = carry;
+  while (rem >= GOAL) { rem -= GOAL; bonuses++; }
+
+  // Pink fills to 100%
+  setGhost(100);
+  await delay(160);
+  setFill(100);
+  await delay(1700);
+
+  // Flash bar
+  flashBar();
+  await delay(400);
+
+  // Badge + tick hours
+  showBonus(bonuses);
+  await tickUnits(bonuses);
+  await delay(300);
+
+  // Reset to remainder
+  state.collected = rem;
+  saveState();
+  const remPct = (rem / GOAL) * 100;
+  setGhost(remPct, true);
+  setFill(remPct, false);
+  updateLabel();
+  await delay(300);
+}
+
+function flashBar() {
+  const overlay = document.getElementById('barFlashOverlay');
+  const COLORS = ['#FF0066','#FF2D78','#FF00AA','#9400FF','#CC00FF','#00E5FF','#00FFEE','#FFE600','#FF6600','#00FF88'];
+  const count = 2 + Math.floor(Math.random() * 2);
+  const cols = Array.from({length:count}, () => COLORS[Math.floor(Math.random() * COLORS.length)]);
+  cols.push('#ffffff');
+  cols.forEach((col, i) => {
+    setTimeout(() => {
+      overlay.style.background  = col;
+      overlay.style.transition  = 'opacity 0.015s';
+      overlay.style.opacity     = '0.82';
+      setTimeout(() => {
+        overlay.style.transition = 'opacity 0.055s';
+        overlay.style.opacity    = '0';
+      }, 32);
+    }, i * 88);
+  });
+}
+
+function showBonus(count = 1) {
+  const el = document.getElementById('bonusBadge');
+  el.textContent = '+' + count + ' ' + TIME_LABEL;
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+
+function updateLabel() {
+  document.getElementById('collected').textContent = '₹' + Math.round(state.collected).toLocaleString('en-IN');
+}
+
+function updateBar() {
+  const pct = Math.min((state.collected / GOAL) * 100, 100);
+  setGhost(pct, true);
+  setFill(pct, false);
+  updateLabel();
+}
+
+/* ════════════════════════════════════════════════════════
+   TIMER TICK
+   ════════════════════════════════════════════════════════ */
+function tick() {
+  const rem = getRemaining();
+
+  if (state.endTime && !state.pausedAt && rem <= 0 && !CFG.countup) {
+    state.endTime   = null;
+    state.remaining = 0;
+    saveState();
+    document.getElementById('startBtn').textContent = 'START';
+    document.getElementById('startBtn').classList.remove('running');
+  }
+
+  renderTimer(rem);
+}
+
+function renderTimer(rem) {
+  const neg = rem < 0;
+  const abs = Math.abs(rem);
   const h = Math.floor(abs / 3600);
   const m = Math.floor((abs % 3600) / 60);
   const s = abs % 60;
 
-  const el = document.getElementById('timer-digits');
-  const sign = neg ? '-' : '';
-  el.textContent = `${sign}${pad(h)}:${pad(m)}:${pad(s)}`;
+  if (!tickingHours) {
+    document.getElementById('timerHours').textContent = (neg ? '-' : '') + String(h).padStart(2, '0');
+  }
+  document.getElementById('timerMinSec').textContent =
+    ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
 
-  // Blink colons when ended
-  if (remainingSeconds <= 0 && !config.countup) {
-    el.classList.add('blink');
+  const disp = document.getElementById('timerDisplay');
+  if (rem > 0 && rem <= 300 && state.endTime && !state.pausedAt) {
+    disp.classList.add('ending');
   } else {
-    el.classList.remove('blink');
-  }
-
-  // Dynamic glow intensity based on remaining time
-  updateTimerGlow();
-}
-
-function pad(n) { return String(n).padStart(2,'0'); }
-
-function updateTimerGlow() {
-  const wrap = document.getElementById('timer-wrap');
-  const avatar = document.getElementById('timer-avatar');
-
-  if (remainingSeconds <= 0 && !config.countup) {
-    // Ended — red pulse
-    wrap.style.setProperty('--glow',     'rgba(239,68,68,0.85)');
-    wrap.style.setProperty('--glow-far', 'rgba(239,68,68,0.40)');
-    avatar.style.background = '#ef4444';
-  } else if (remainingSeconds <= 300) {
-    // < 5 min — warning amber
-    wrap.style.setProperty('--glow',     'rgba(245,158,11,0.82)');
-    wrap.style.setProperty('--glow-far', 'rgba(245,158,11,0.38)');
-    avatar.style.background = '#f59e0b';
-  } else if (remainingSeconds <= 600) {
-    // < 10 min — orange
-    wrap.style.setProperty('--glow',     'rgba(226,98,3,0.78)');
-    wrap.style.setProperty('--glow-far', 'rgba(226,98,3,0.34)');
-    avatar.style.background = '#e26203';
-  } else {
-    // Normal — purple
-    wrap.style.setProperty('--glow',     TIMER_THEME.glow);
-    wrap.style.setProperty('--glow-far', TIMER_THEME.glowFar);
-    avatar.style.background = '#7c3aed';
+    disp.classList.remove('ending');
   }
 }
 
 /* ════════════════════════════════════════════════════════
-   COUNTDOWN
+   RESET
    ════════════════════════════════════════════════════════ */
-function startCountdown() {
-  if (countInterval) clearInterval(countInterval);
-  countInterval = setInterval(() => {
-    syncFromStorage();
-    render();
-  }, 1000);
-}
-
-/* ════════════════════════════════════════════════════════
-   EFFECT HELPERS — from alert_v3
-   ════════════════════════════════════════════════════════ */
-function lerpToWhite(hex, t) {
-  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-  return `rgb(${Math.round(r+(255-r)*t)},${Math.round(g+(255-g)*t)},${Math.round(b+(255-b)*t)})`;
-}
-
-function perimeterPoint(frac, W, H) {
-  const R=H/2, straight=Math.max(0,W-H), arc=Math.PI*R, total=2*straight+2*arc;
-  let d=frac*total;
-  if(d<=straight) return {x:R+d,y:0};
-  d-=straight;
-  if(d<=arc){const a=-Math.PI/2+(d/arc)*Math.PI; return {x:W-R+Math.cos(a)*R,y:R+Math.sin(a)*R};}
-  d-=arc;
-  if(d<=straight) return {x:W-R-d,y:H};
-  d-=straight;
-  const a=Math.PI/2+(d/arc)*Math.PI;
-  return {x:R+Math.cos(a)*R, y:R+Math.sin(a)*R};
-}
-
-function animateRimSpot(el) {
-  const wrap = el.querySelector('.card-wrap');
-  if (!wrap) return;
-  let t=Math.random(), lastTs=null;
-  const PERIOD=12;
-  (function tick(ts) {
-    if(lastTs===null) lastTs=ts;
-    t = (t + (ts-lastTs)/1000/PERIOD) % 1;
-    lastTs = ts;
-    const W=wrap.offsetWidth, H=wrap.offsetHeight;
-    const {x,y} = perimeterPoint(t,W,H);
-    wrap.style.setProperty('--spot-x', x+'px');
-    wrap.style.setProperty('--spot-y', y+'px');
-    requestAnimationFrame(tick);
-  })(performance.now());
-}
-
-function makeParticle(x,y,dx,dy,size,dur,delay,color,glowColor) {
-  const p=document.createElement('span');
-  p.className='particle';
-  p.style.cssText=
-    `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`+
-    `--dx:${dx}px;--dy:${dy}px;--dur:${dur}s;--delay:${delay}s;`+
-    `--pk:${(0.65+Math.random()*0.35).toFixed(2)};`+
-    `background:${color};box-shadow:0 0 ${(size*2.2).toFixed(1)}px ${glowColor};`;
-  return p;
-}
-
-function randomColor(shade) {
-  return Math.random()>0.45
-    ? `rgba(255,255,255,${(0.55+Math.random()*0.45).toFixed(2)})`
-    : lerpToWhite(shade, 0.3+Math.random()*0.55);
-}
-
-function addOuterParticles(el, count, shade) {
-  const layer = el.querySelector('.particles-layer');
-  if (!layer) return;
-  const W = el.querySelector('.card').offsetWidth || 660;
-  const glow = lerpToWhite(shade, 0.55);
-  for (let i=0; i<count; i++) {
-    const size=3+Math.random()*10, onTop=Math.random()>0.2;
-    const x=35+Math.random()*(W-70), y=onTop?2:72;
-    const dx=(Math.random()-0.5)*30, dy=onTop?-(20+Math.random()*34):(20+Math.random()*34);
-    const dur=1.4+Math.random()*2.4;
-    layer.appendChild(makeParticle(x,y,dx,dy,size,dur,-(Math.random()*dur),randomColor(shade),glow));
-  }
-}
-
-function addCoreParticles(el, count, shade) {
-  const card = el.querySelector('.card');
-  if (!card) return;
-  const layer=document.createElement('div');
-  layer.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden;border-radius:37px;';
-  card.insertBefore(layer, card.firstChild);
-  const W=card.offsetWidth||660, H=74;
-  const glow=lerpToWhite(shade,0.62);
-  for(let i=0;i<count;i++){
-    const size=2.5+Math.random()*9, x=8+Math.random()*(W-16), y=4+Math.random()*(H-8);
-    const angle=Math.random()*Math.PI*2, speed=10+Math.random()*24;
-    const dur=1.0+Math.random()*1.8;
-    layer.appendChild(makeParticle(x,y,Math.cos(angle)*speed,Math.sin(angle)*speed,size,dur,-(Math.random()*dur),randomColor(shade),glow));
-  }
-}
-
-/* ════════════════════════════════════════════════════════
-   TIMER FLASH — on tip
-   ════════════════════════════════════════════════════════ */
-function showTimerFlash() {
-  const flash = document.getElementById('timer-flash');
-  const wrap  = document.getElementById('timer-wrap');
-
-  // Color flash
-  const COLORS = ['#7c3aed','#a78bfa','#ffffff','#3b82f6'];
-  COLORS.forEach((col, i) => setTimeout(() => {
-    flash.style.background  = col;
-    flash.style.transition  = 'opacity 0.015s';
-    flash.style.opacity     = '0.7';
-    setTimeout(() => {
-      flash.style.transition = 'opacity 0.06s';
-      flash.style.opacity    = '0';
-    }, 35);
-  }, i * 60));
-
-  // Shake
-  wrap.style.transition = 'transform 0.06s ease-out';
-  wrap.style.transform  = 'translateX(-6px) scaleY(1.010)';
-  setTimeout(() => { wrap.style.transform = 'translateX(5px) scaleY(0.994)'; }, 65);
-  setTimeout(() => { wrap.style.transform = 'translateX(-2px)'; }, 120);
-  setTimeout(() => { wrap.style.transition = ''; wrap.style.transform = ''; }, 200);
-
-  // Glow burst
-  const origGlow = TIMER_THEME.glow;
-  wrap.style.boxShadow = `0 0 0 2px rgba(255,255,255,0.88), 0 0 60px ${origGlow}, 0 0 120px ${origGlow}, 0 0 200px ${origGlow}`;
-  setTimeout(() => {
-    wrap.style.transition = 'box-shadow 1.5s ease-out';
-    wrap.style.boxShadow  = '';
-  }, 200);
-  setTimeout(() => {
-    wrap.style.transition = '';
-    wrap.style.boxShadow  = '';
-  }, 1800);
-}
-
-/* ════════════════════════════════════════════════════════
-   TIP NOTIFICATION PILLS
-   ════════════════════════════════════════════════════════ */
-let activeTipPills = [];
-
-function showTipPill(name, amount, addedSec) {
-  const t = tierFor(amount);
-  if (!t) return;
-
-  const friendly = friendlyDur(addedSec);
-  const safeN    = name.replace(/</g,'&lt;').replace(/>/g,'&gt;').toUpperCase();
-
-  const slot = document.createElement('div');
-  slot.className = 'tip-slot';
-  // Position above the timer pill
-  const timerTop = 63;
-  const newTop = timerTop - 94 - (activeTipPills.length * 94);
-  slot.style.top = newTop + 'px';
-
-  const alertEl = document.createElement('div');
-  alertEl.className = 'alert';
-  alertEl.style.setProperty('--primary', t.primary);
-  alertEl.style.setProperty('--shade',   t.shade);
-  alertEl.style.setProperty('--text',    t.text);
-  if (t.effect >= 1) {
-    alertEl.style.setProperty('--glow',     t.glow     || 'transparent');
-    alertEl.style.setProperty('--glow-far', t.glowFar  || 'transparent');
-  }
-
-  alertEl.innerHTML = `
-    <div class="card-wrap${t.effect?' effect':''}${t.effect>=2?' glow':''}">
-      <div class="card">
-        <div class="header">
-          <div class="content">
-            <div class="iconWrap">
-              <div class="avatar" style="background:${avatarColor(safeN)}">${safeN[0]}</div>
-            </div>
-            <div class="name">${safeN}</div>
-            <div class="amount">+${friendly}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    ${t.effect>=2?'<div class="particles-layer"></div>':''}`;
-
-  slot.appendChild(alertEl);
-  document.getElementById('tip-container').appendChild(slot);
-
-  const ref = { slot, alertEl };
-  activeTipPills.push(ref);
-
-  // Trigger entrance
-  requestAnimationFrame(() => {
-    alertEl.classList.add('show');
-    if (t.effect >= 1) animateRimSpot(alertEl);
-    if (t.effect >= 2) {
-      addOuterParticles(alertEl, [0,0,20,28][t.effect], t.shade);
-      addCoreParticles(alertEl,  [0,0,16,22][t.effect], t.shade);
-    }
-  });
-
-  // Auto-dismiss after 5s
-  setTimeout(() => {
-    alertEl.classList.remove('show');
-    alertEl.classList.add('hide');
-    setTimeout(() => {
-      slot.remove();
-      activeTipPills = activeTipPills.filter(p => p !== ref);
-      // Reposition remaining
-      activeTipPills.forEach((p, i) => {
-        p.slot.style.top = (timerTop - 94 - i * 94) + 'px';
-      });
-    }, 800);
-  }, 5000);
-}
-
-function friendlyDur(sec) {
-  if (sec >= 3600) {
-    const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60);
-    return m>0 ? `${h}H ${m}M` : `${h} HOUR${h>1?'S':''}`;
-  }
-  if (sec >= 60) return `${Math.floor(sec/60)} MIN`;
-  return `${sec}S`;
+function resetAll() {
+  if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
+  tickingHours = false;
+  animating    = false;
+  animQueue.length = 0;
+  localStorage.removeItem('marathonTimerV3');
+  state = loadState();
+  document.getElementById('startBtn').textContent = 'START';
+  document.getElementById('startBtn').classList.remove('running');
+  document.getElementById('timerHours').textContent = String(Math.floor(START_SECS / 3600)).padStart(2, '0');
+  const m = Math.floor((START_SECS % 3600) / 60);
+  const s = START_SECS % 60;
+  document.getElementById('timerMinSec').textContent = ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  updateBar();
+  tickInterval = setInterval(tick, 500);
 }
 
 /* ════════════════════════════════════════════════════════
@@ -640,96 +628,100 @@ function friendlyDur(sec) {
    ════════════════════════════════════════════════════════ */
 let ws = null;
 
-function connectSE() {
-  if (!config.channelId || !config.token) return;
+function seStatus(cls, label) {
+  const el = document.getElementById('seStatus');
+  el.style.display = 'flex';
+  document.getElementById('seDot').className = 'se-dot ' + cls;
+  document.getElementById('seLabel').textContent = label;
+}
 
+function connectSE() {
+  if (!CFG.channelId || !CFG.token) return;
+
+  seStatus('trying', 'Connecting…');
   ws = new WebSocket('wss://astro.streamelements.com');
 
-  ws.onopen = () => console.log('[Timer] WS open');
+  ws.onopen = () => {};
 
   ws.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
 
       if (msg.type === 'welcome') {
-        console.log('[Timer] Authenticated');
+        seStatus('live', 'SE Live');
 
         ws.send(JSON.stringify({
-          type:'subscribe', nonce:'ov_tips_'+Date.now(),
-          data:{ topic:'channel.tips', room:config.channelId, token:config.token, token_type:'jwt' }
+          type:'subscribe', nonce:'t_'+Date.now(),
+          data:{ topic:'channel.tips', room:CFG.channelId, token:CFG.token, token_type:'jwt' }
         }));
-
         ws.send(JSON.stringify({
-          type:'subscribe', nonce:'ov_act_'+Date.now(),
-          data:{ topic:'channel.activities', room:config.channelId, token:config.token, token_type:'jwt' }
+          type:'subscribe', nonce:'a_'+Date.now(),
+          data:{ topic:'channel.activities', room:CFG.channelId, token:CFG.token, token_type:'jwt' }
         }));
       }
 
-      if (msg.type === 'message') handleTip(msg);
-    } catch (err) {
-      console.error('[Timer] parse error:', err);
-    }
+      if (msg.type === 'message') handleSETip(msg);
+    } catch {}
   };
 
-  ws.onerror = () => console.error('[Timer] WS error');
+  ws.onerror = () => seStatus('dead', 'SE Error');
   ws.onclose = () => {
-    console.log('[Timer] WS closed — reconnecting 5s');
+    seStatus('dead', 'SE Off');
     setTimeout(connectSE, 5000);
   };
 }
 
-function handleTip(msg) {
+function handleSETip(msg) {
   const d = msg.data;
   if (!d) return;
 
-  let amount = 0, name = 'ANONYMOUS';
+  let amount = 0;
 
   if (msg.topic === 'channel.tips') {
     amount = d.amount || d.data?.amount || 0;
-    name   = d.displayName || d.username || d.data?.displayName || d.data?.username || 'Anonymous';
   }
-
   if (msg.topic === 'channel.activities' && d.type === 'tip') {
     amount = d.data?.amount || 0;
-    name   = d.data?.displayName || d.data?.username || 'Anonymous';
   }
 
-  if (amount <= 0) return;
-
-  let addSec = 0;
-
-  if (config.proportional) {
-    addSec = Math.floor((amount / config.tipAmount) * config.timePer);
-  } else if (config.stack) {
-    addSec = Math.floor(amount / config.tipAmount) * config.timePer;
-  } else {
-    if (amount >= config.tipAmount) addSec = config.timePer;
-  }
-
-  if (addSec > 0) {
-    remainingSeconds += addSec;
-    render();
-    showTimerFlash();
-    showTipPill(name, amount, addSec);
-  }
+  if (amount > 0) addAmount(amount);
 }
+
+/* ════════════════════════════════════════════════════════
+   DEV KEYS
+   ════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'r' || e.key === 'R') resetAll();
+  if (e.key === 't' || e.key === 'T') addAmount(500);
+  if (e.key === 'y' || e.key === 'Y') addAmount(5000);
+  if (e.key === 'u' || e.key === 'U') addAmount(10000);
+  if (e.key === 'i' || e.key === 'I') addAmount(25000);
+});
 
 /* ════════════════════════════════════════════════════════
    INIT
    ════════════════════════════════════════════════════════ */
-const hasConfig = loadConfig();
-applyTimerTheme();
-loadTimerState();
-render();
+// Restore button label
+if (state.endTime && !state.pausedAt) {
+  document.getElementById('startBtn').textContent = 'PAUSE';
+  document.getElementById('startBtn').classList.add('running');
+} else if (state.pausedAt) {
+  document.getElementById('startBtn').textContent = 'RESUME';
+}
 
-// Start effects on timer pill
-const timerAlertEl = document.getElementById('timer-alert');
-animateRimSpot(timerAlertEl);
-addOuterParticles(timerAlertEl, 22, TIMER_THEME.shade);
-addCoreParticles(timerAlertEl,  16, TIMER_THEME.shade);
+updateBar();
+tick();
+tickInterval = setInterval(tick, 1000);
 
-startCountdown();
-if (hasConfig) connectSE();
+// Connect to SE if credentials present
+if (CFG.channelId && CFG.token) {
+  connectSE();
+}
+
+// Auto-start if configured
+if (CFG.autostart && !state.endTime && !state.pausedAt) {
+  toggleTimer();
+}
 </script>
 </body>
 </html>

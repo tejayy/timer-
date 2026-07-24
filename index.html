@@ -616,28 +616,6 @@
 
                 <div class="toggle-row">
                     <div class="toggle-info">
-                        <div class="toggle-name">Proportional Tips</div>
-                        <div class="toggle-desc">₹5,000 → 30 min if threshold is ₹10,000/1H</div>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="opt-proportional" checked>
-                        <span class="switch-track"></span>
-                    </label>
-                </div>
-
-                <div class="toggle-row">
-                    <div class="toggle-info">
-                        <div class="toggle-name">Stack Tips</div>
-                        <div class="toggle-desc">₹20,000 → 2 hours if threshold is ₹10,000/1H</div>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="opt-stack" checked>
-                        <span class="switch-track"></span>
-                    </label>
-                </div>
-
-                <div class="toggle-row">
-                    <div class="toggle-info">
                         <div class="toggle-name">Count Up After Zero</div>
                         <div class="toggle-desc">Timer goes negative instead of stopping at 00:00:00</div>
                     </div>
@@ -646,11 +624,22 @@
                         <span class="switch-track"></span>
                     </label>
                 </div>
+
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-name">Auto-Start Timer</div>
+                        <div class="toggle-desc">Timer starts counting down as soon as the overlay loads</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="opt-autostart">
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
             </div>
 
             <!-- Start Button -->
-            <button class="btn btn-accent" id="btn-start" onclick="startMarathon()">
-                🚀 Start Marathon
+            <button class="btn btn-accent" id="btn-start" onclick="generateOverlay()">
+                🔗 Generate Overlay URL
             </button>
             <div id="validation-error" style="color: var(--danger); font-size: 12px; margin-top: 8px; text-align: center; display: none;"></div>
         </div>
@@ -671,22 +660,12 @@
                 <div class="preview-label">Time Remaining</div>
             </div>
 
-            <!-- Quick Controls (shown when running) -->
-            <div id="controls" style="display: none;">
-                <div class="btn-group" style="margin-bottom: 16px;">
-                    <button class="btn btn-outline" onclick="manualAdd(3600)">+ 1 Hour</button>
-                    <button class="btn btn-outline" onclick="manualAdd(600)">+ 10 Min</button>
-                </div>
-                <div class="btn-group" style="margin-bottom: 24px;">
-                    <button class="btn btn-outline" onclick="manualAdd(-600)">− 10 Min</button>
-                    <button class="btn btn-danger" onclick="stopMarathon()">⏹ Stop Marathon</button>
-                </div>
-            </div>
+
 
             <!-- OBS URL -->
             <div class="url-card" id="obs-section" style="display: none;">
                 <h3>🖥️ OBS Browser Source URL</h3>
-                <p>Add this as a Browser Source in OBS. Recommended: <strong>800 × 200</strong>.</p>
+                <p>Add as Browser Source in OBS. Width: <strong>800</strong>, Height: <strong>220</strong> (timer + bar). Set <strong>300</strong> to include controls.</p>
                 <div class="url-row">
                     <input type="text" id="obs-url" readonly>
                     <button onclick="copyUrl()">Copy</button>
@@ -707,31 +686,26 @@
     // ════════════════════════════════════════════════════
     //  STATE
     // ════════════════════════════════════════════════════
-    let ws = null;
-    let timerInterval = null;
-    let remainingSeconds = 0;
-    let running = false;
     let config = {};
     let logs = [];
+
+    const STORAGE_KEY = 'marathon_config_v3';
 
     // ════════════════════════════════════════════════════
     //  PERSIST CONFIG
     // ════════════════════════════════════════════════════
-    const STORAGE_KEY = 'marathon_v2';
-
     function loadSaved() {
         try {
             const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
             if (d.channelId) document.getElementById('se-id').value = d.channelId;
             if (d.token) document.getElementById('se-token').value = d.token;
-            if (d.tipAmount) document.getElementById('tip-amount').value = d.tipAmount;
+            if (d.goal) document.getElementById('tip-amount').value = d.goal;
             if (d.timePer) document.getElementById('time-per-tip').value = d.timePer;
             if (d.startH != null) document.getElementById('start-hours').value = d.startH;
             if (d.startM != null) document.getElementById('start-minutes').value = d.startM;
             if (d.startS != null) document.getElementById('start-seconds').value = d.startS;
-            if (d.proportional != null) document.getElementById('opt-proportional').checked = d.proportional;
-            if (d.stack != null) document.getElementById('opt-stack').checked = d.stack;
             if (d.countup != null) document.getElementById('opt-countup').checked = d.countup;
+            if (d.autostart != null) document.getElementById('opt-autostart').checked = d.autostart;
         } catch {}
     }
 
@@ -739,30 +713,20 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
             channelId: config.channelId,
             token: config.token,
-            tipAmount: config.tipAmount,
+            goal: config.goal,
             timePer: config.timePer,
             startH: config.startH,
             startM: config.startM,
             startS: config.startS,
-            proportional: config.proportional,
-            stack: config.stack,
             countup: config.countup,
-        }));
-    }
-
-    function saveTimerState() {
-        localStorage.setItem('marathon_timer_state', JSON.stringify({
-            remainingSeconds,
-            timestamp: Date.now(),
-            running,
-            config
+            autostart: config.autostart,
         }));
     }
 
     // ════════════════════════════════════════════════════
-    //  START
+    //  GENERATE OVERLAY URL
     // ════════════════════════════════════════════════════
-    function startMarathon() {
+    function generateOverlay() {
         const channelId = document.getElementById('se-id').value.trim();
         const token = document.getElementById('se-token').value.trim();
         const errEl = document.getElementById('validation-error');
@@ -783,244 +747,40 @@
         config = {
             channelId,
             token,
-            tipAmount: parseFloat(document.getElementById('tip-amount').value) || 10000,
+            goal: parseFloat(document.getElementById('tip-amount').value) || 10000,
             timePer: parseInt(document.getElementById('time-per-tip').value) || 3600,
             startH: parseInt(document.getElementById('start-hours').value) || 0,
             startM: parseInt(document.getElementById('start-minutes').value) || 0,
             startS: parseInt(document.getElementById('start-seconds').value) || 0,
-            proportional: document.getElementById('opt-proportional').checked,
-            stack: document.getElementById('opt-stack').checked,
             countup: document.getElementById('opt-countup').checked,
+            autostart: document.getElementById('opt-autostart').checked,
         };
 
         saveConfig();
-
-        remainingSeconds = config.startH * 3600 + config.startM * 60 + config.startS;
-        running = true;
-
-        saveTimerState();
         buildOverlayUrl();
-        updateDisplay();
-        startCountdown();
-        connectSE();
 
-        // UI
-        document.getElementById('controls').style.display = 'block';
+        // Show URL section + update preview
         document.getElementById('obs-section').style.display = 'block';
-        document.getElementById('btn-start').disabled = true;
-        document.getElementById('btn-start').textContent = '✅ Marathon Running';
+        updateStatus('live', 'Overlay URL Generated');
 
-        addLog('sys', `Marathon started — ${formatTime(remainingSeconds)}`);
+        const totalSecs = config.startH * 3600 + config.startM * 60 + config.startS;
+        document.getElementById('timer-display').textContent = formatTime(totalSecs);
+
+        addLog('sys', `Overlay URL generated — Start: ${formatTime(totalSecs)}, Goal: ₹${config.goal.toLocaleString('en-IN')}/${friendlyTimeLabel(config.timePer)}`);
     }
 
-    // ════════════════════════════════════════════════════
-    //  STOP
-    // ════════════════════════════════════════════════════
-    function stopMarathon() {
-        if (!confirm('Stop the marathon timer?')) return;
-
-        running = false;
-        if (ws) { ws.close(); ws = null; }
-        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-
-        saveTimerState();
-        updateStatus('off', 'Stopped');
-
-        document.getElementById('controls').style.display = 'none';
-        document.getElementById('btn-start').disabled = false;
-        document.getElementById('btn-start').textContent = '🚀 Start Marathon';
-
-        addLog('sys', 'Marathon stopped');
-    }
-
-    // ════════════════════════════════════════════════════
-    //  COUNTDOWN
-    // ════════════════════════════════════════════════════
-    function startCountdown() {
-        if (timerInterval) clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-            if (remainingSeconds > 0) {
-                remainingSeconds--;
-            } else if (!config.countup) {
-                // Timer ended
-                clearInterval(timerInterval);
-                timerInterval = null;
-                addLog('sys', '⏰ Timer reached zero!');
-            } else {
-                remainingSeconds--;
-            }
-            updateDisplay();
-            saveTimerState();
-        }, 1000);
-    }
-
-    function updateDisplay() {
-        document.getElementById('timer-display').textContent = formatTime(remainingSeconds);
-    }
-
-    function formatTime(sec) {
-        const negative = sec < 0;
-        const abs = Math.abs(sec);
-        const h = Math.floor(abs / 3600);
-        const m = Math.floor((abs % 3600) / 60);
-        const s = abs % 60;
-        const str = `${pad(h)}:${pad(m)}:${pad(s)}`;
-        return negative ? `-${str}` : str;
-    }
-
-    function pad(n) { return String(n).padStart(2, '0'); }
-
-    function manualAdd(sec) {
-        remainingSeconds += sec;
-        updateDisplay();
-        saveTimerState();
-
-        const label = sec > 0 ? `+${friendlyDur(sec)}` : `-${friendlyDur(Math.abs(sec))}`;
-        addLog('sys', `Manually adjusted: ${label}`);
-
-        if (sec > 0 && !timerInterval && running) {
-            startCountdown();
-        }
-    }
-
-    function friendlyDur(sec) {
-        if (sec >= 3600) {
-            const h = Math.floor(sec / 3600);
-            const m = Math.floor((sec % 3600) / 60);
-            return m > 0 ? `${h}h ${m}m` : `${h}h`;
-        }
-        if (sec >= 60) return `${Math.floor(sec / 60)}m`;
-        return `${sec}s`;
-    }
-
-    // ════════════════════════════════════════════════════
-    //  STREAMELEMENTS WEBSOCKET
-    // ════════════════════════════════════════════════════
-    function connectSE() {
-        updateStatus('connecting', 'Connecting…');
-
-        ws = new WebSocket('wss://astro.streamelements.com');
-
-        ws.onopen = () => {
-            addLog('sys', 'WebSocket connected');
-        };
-
-        ws.onmessage = (e) => {
-            try {
-                const msg = JSON.parse(e.data);
-
-                if (msg.type === 'welcome') {
-                    updateStatus('live', 'Connected — Listening');
-                    addLog('sys', 'Authenticated ✓');
-
-                    ws.send(JSON.stringify({
-                        type: 'subscribe',
-                        nonce: 'tips_' + Date.now(),
-                        data: {
-                            topic: 'channel.tips',
-                            room: config.channelId,
-                            token: config.token,
-                            token_type: 'jwt'
-                        }
-                    }));
-
-                    ws.send(JSON.stringify({
-                        type: 'subscribe',
-                        nonce: 'act_' + Date.now(),
-                        data: {
-                            topic: 'channel.activities',
-                            room: config.channelId,
-                            token: config.token,
-                            token_type: 'jwt'
-                        }
-                    }));
-                }
-
-                if (msg.type === 'response' && msg.data?.success) {
-                    addLog('sys', `Subscribed to ${msg.data.topic || 'events'}`);
-                }
-
-                if (msg.type === 'message') {
-                    handleTipEvent(msg);
-                }
-            } catch (err) {
-                console.error('WS parse error:', err);
-            }
-        };
-
-        ws.onerror = () => {
-            updateStatus('error', 'Connection Error');
-            addLog('sys', '❌ WebSocket error');
-        };
-
-        ws.onclose = () => {
-            if (!running) return;
-            updateStatus('connecting', 'Reconnecting…');
-            addLog('sys', '🔌 Disconnected — retrying in 5s');
-            setTimeout(() => { if (running) connectSE(); }, 5000);
-        };
-    }
-
-    function handleTipEvent(msg) {
-        const d = msg.data;
-        if (!d) return;
-
-        let amount = 0, name = 'Anonymous';
-
-        if (msg.topic === 'channel.tips') {
-            amount = d.amount || d.data?.amount || 0;
-            name = d.displayName || d.username || d.data?.displayName || d.data?.username || 'Anonymous';
-        }
-
-        if (msg.topic === 'channel.activities' && d.type === 'tip') {
-            amount = d.data?.amount || 0;
-            name = d.data?.displayName || d.data?.username || 'Anonymous';
-        }
-
-        if (amount <= 0) return;
-
-        let addSec = 0;
-
-        if (config.proportional) {
-            addSec = Math.floor((amount / config.tipAmount) * config.timePer);
-        } else if (config.stack) {
-            addSec = Math.floor(amount / config.tipAmount) * config.timePer;
-        } else {
-            if (amount >= config.tipAmount) addSec = config.timePer;
-        }
-
-        if (addSec > 0) {
-            remainingSeconds += addSec;
-            updateDisplay();
-            saveTimerState();
-
-            if (!timerInterval && running) startCountdown();
-
-            addLog('tip', `<strong>${esc(name)}</strong> tipped ₹${amount.toLocaleString()} → +${friendlyDur(addSec)}`);
-        } else {
-            addLog('tip', `<strong>${esc(name)}</strong> tipped ₹${amount.toLocaleString()} (below threshold)`);
-        }
-    }
-
-    function esc(s) {
-        const d = document.createElement('div');
-        d.textContent = s;
-        return d.innerHTML;
-    }
-
-    // ════════════════════════════════════════════════════
-    //  OBS URL
-    // ════════════════════════════════════════════════════
     function buildOverlayUrl() {
         const base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '');
         const params = new URLSearchParams({
             id: config.channelId,
             token: config.token,
-            amount: config.tipAmount,
-            time: config.timePer,
-            prop: config.proportional ? '1' : '0',
-            stack: config.stack ? '1' : '0',
+            goal: config.goal,
+            timePer: config.timePer,
+            startH: config.startH,
+            startM: config.startM,
+            startS: config.startS,
             countup: config.countup ? '1' : '0',
+            autostart: config.autostart ? '1' : '0',
         });
         const url = `${base}/overlay.html?${params.toString()}`;
         document.getElementById('obs-url').value = url;
@@ -1036,21 +796,32 @@
     }
 
     // ════════════════════════════════════════════════════
-    //  STATUS
+    //  HELPERS
     // ════════════════════════════════════════════════════
+    function formatTime(sec) {
+        const abs = Math.abs(sec);
+        const h = Math.floor(abs / 3600);
+        const m = Math.floor((abs % 3600) / 60);
+        const s = abs % 60;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    function friendlyTimeLabel(secs) {
+        if (secs >= 3600 && secs % 3600 === 0) return secs / 3600 + ' HR';
+        if (secs >= 60) return Math.floor(secs / 60) + ' MIN';
+        return secs + ' SEC';
+    }
+
     function updateStatus(cls, text) {
         const pill = document.getElementById('status-pill');
         pill.className = 'status-pill ' + cls;
         document.getElementById('status-text').textContent = text;
     }
 
-    // ════════════════════════════════════════════════════
-    //  LOG
-    // ════════════════════════════════════════════════════
     function addLog(type, html) {
         const t = new Date().toLocaleTimeString('en-US', { hour12: false });
         logs.unshift({ type, html, t });
-        if (logs.length > 100) logs.pop();
+        if (logs.length > 50) logs.pop();
         renderLog();
     }
 
@@ -1058,7 +829,6 @@
         const el = document.getElementById('log-list');
         const empty = document.getElementById('log-empty');
         if (empty) empty.remove();
-
         el.innerHTML = logs.map(l => `
             <div class="log-item ${l.type}">
                 <span class="lt">${l.t}</span>
@@ -1067,9 +837,6 @@
         `).join('');
     }
 
-    // ════════════════════════════════════════════════════
-    //  HELPERS
-    // ════════════════════════════════════════════════════
     function showError(msg) {
         const el = document.getElementById('validation-error');
         el.textContent = msg;
