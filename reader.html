@@ -274,15 +274,19 @@
   let currentFilter = 'all';
   let items = [];
 
-  // ── Persist (server-side) ──
-  const API = `http://${location.hostname || 'localhost'}:${location.port || '4000'}/api/reader-items`;
-
+  // ── Persist (Local Storage) ──
   function saveItems() {
-    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(items.slice(0, MAX_ITEMS)) }).catch(() => {});
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, MAX_ITEMS)));
   }
 
   function loadItems() {
-    fetch(API).then(r => r.json()).then(data => { items = data || []; renderAll(); }).catch(() => { items = []; renderAll(); });
+    try {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      items = data || [];
+    } catch {
+      items = [];
+    }
+    renderAll();
   }
 
   function clearAll() {
@@ -428,24 +432,41 @@
   // ── Init ──
   loadItems();
 
-  // ── WebSocket ──
-  (function connect() {
-    const host = location.hostname || 'localhost';
-    const port = location.port || '4000';
-    const ws   = new WebSocket(`ws://${host}:${port}`);
+  // ── StreamElements WebSocket ──
+  const P = new URLSearchParams(location.search);
+  const channelId = P.get('id') || '';
+  const token = P.get('token') || '';
 
-    ws.onopen = () => {
-      document.getElementById('status').textContent = 'LIVE';
-      document.getElementById('status').className   = 'status live';
-    };
+  (function connect() {
+    if (!channelId || !token) {
+      document.getElementById('status').textContent = 'No ID/Token';
+      return;
+    }
+
+    const ws = new WebSocket('wss://astro.streamelements.com');
+
+    ws.onopen = () => {};
 
     ws.onmessage = e => {
       try {
         const msg = JSON.parse(e.data);
-        if (msg.type === 'tip') {
-          addItem({ type: 'st', name: msg.name, amount: msg.amount, message: msg.message || '', ts: Date.now() });
-        } else if (msg.type === 'superchat') {
-          addItem({ type: 'sc', name: msg.name, amount: msg.amount, message: msg.message || '', currency: msg.currency || 'INR', ts: Date.now() });
+        
+        if (msg.type === 'welcome') {
+          document.getElementById('status').textContent = 'LIVE';
+          document.getElementById('status').className   = 'status live';
+          
+          ws.send(JSON.stringify({
+            type: 'subscribe', nonce: 't_' + Date.now(),
+            data: { topic: 'channel.tips', room: channelId, token: token, token_type: 'jwt' }
+          }));
+          ws.send(JSON.stringify({
+            type: 'subscribe', nonce: 'a_' + Date.now(),
+            data: { topic: 'channel.activities', room: channelId, token: token, token_type: 'jwt' }
+          }));
+        }
+
+        if (msg.type === 'message') {
+          handleSEMessage(msg);
         }
       } catch {}
     };
@@ -456,6 +477,39 @@
       setTimeout(connect, 3000);
     };
   })();
+
+  function handleSEMessage(msg) {
+    const d = msg.data;
+    if (!d) return;
+
+    if (msg.topic === 'channel.activities') {
+      const type = d.type; // 'tip' or 'superchat'
+      const data = d.data || {};
+      const amount = data.amount || 0;
+      const name = data.username || data.name || 'Anonymous';
+      const message = data.message || '';
+      const currency = data.currency || 'INR';
+
+      // Ensure we have an amount
+      if (amount <= 0) return;
+
+      if (type === 'tip') {
+        addItem({ type: 'st', name, amount, message, currency, ts: Date.now() });
+      }
+      // Ignored superchats for now
+    } else if (msg.topic === 'channel.tips') {
+      const data = d.data || d || {};
+      const amount = data.amount || 0;
+      const name = data.username || data.name || 'Anonymous';
+      const message = data.message || '';
+      const currency = data.currency || 'INR';
+      
+      if (amount > 0) {
+        addItem({ type: 'st', name, amount, message, currency, ts: Date.now() });
+      }
+    }
+  }
+
 </script>
 </body>
 </html>
