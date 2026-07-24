@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marathon Timer — Config</title>
+    <meta name="description" content="Configure your Marathon Timer for OBS powered by StreamElements tips">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-0: #08080e;
+            --bg-1: #0e0e18;
+            --bg-2: #161625;
+            --bg-3: #1e1e32;
+            --bg-input: #131322;
+            --border: #2a2a48;
+            --border-hover: #3d3d66;
+            --border-focus: #7c3aed;
+            --text-1: #f0f0f8;
+            --text-2: #9595b5;
+            --text-3: #5e5e80;
+            --accent: #7c3aed;
+            --accent-2: #6d28d9;
+            --accent-light: #a78bfa;
+            --accent-glow: rgba(124, 58, 237, 0.25);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-0);
+            color: var(--text-1);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ─── Ambient Background ─── */
+        .bg-noise {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237, 0.12), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(59, 130, 246, 0.08), transparent);
+        }
+
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(124, 58, 237, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(124, 58, 237, 0.025) 1px, transparent 1px);
+            background-size: 48px 48px;
+        }
+
+        /* ─── Shell ─── */
+        .shell {
+            position: relative; z-index: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 100vh;
+        }
+
+        /* ─── Left Panel: Config ─── */
+        .panel-config {
+            padding: 48px 40px;
+            overflow-y: auto;
+            max-height: 100vh;
+            border-right: 1px solid var(--border);
+        }
+
+        .panel-config::-webkit-scrollbar { width: 4px; }
+        .panel-config::-webkit-scrollbar-track { background: transparent; }
+        .panel-config::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        /* ─── Right Panel: Preview + Controls ─── */
+        .panel-preview {
+            padding: 48px 40px;
+            overflow-y: auto;
+            max-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ─── Logo ─── */
+        .logo-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 36px;
+        }
+
+        .logo-icon {
+            width: 48px; height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--accent), #3b82f6);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 4px 24px var(--accent-glow);
+            flex-shrink: 0;
+        }
+
+        .logo-text h1 {
+            font-size: 22px; font-weight: 800;
+            background: linear-gradient(135deg, var(--text-1), var(--text-2));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            letter-spacing: -0.3px;
+        }
+
+        .logo-text p {
+            font-size: 13px; color: var(--text-3); margin-top: 1px;
+        }
+
+        /* ─── Section ─── */
+        .section {
+            margin-bottom: 28px;
+        }
+
+        .section-label {
+            font-size: 11px; font-weight: 600;
+            color: var(--accent-light);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .section-label::after {
+            content: '';
+            flex: 1; height: 1px;
+            background: linear-gradient(90deg, var(--border), transparent);
+        }
+
+        /* ─── Form ─── */
+        .field { margin-bottom: 16px; }
+        .field:last-child { margin-bottom: 0; }
+
+        .field label {
+            display: block;
+            font-size: 13px; font-weight: 500;
+            color: var(--text-2);
+            margin-bottom: 6px;
+        }
+
+        .field input, .field select {
+            width: 100%;
+            padding: 11px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            background: var(--bg-input);
+            color: var(--text-1);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .field input:focus, .field select:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .field input::placeholder { color: var(--text-3); }
+
+        .field .hint {
+            font-size: 11px; color: var(--text-3); margin-top: 4px;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .field-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* ─── Token reveal ─── */
+        .token-wrapper {
+            position: relative;
+        }
+
+        .token-wrapper input {
+            padding-right: 44px;
+        }
+
+        .token-toggle {
+            position: absolute;
+            right: 10px; top: 50%; transform: translateY(-50%);
+            background: none; border: none;
+            color: var(--text-3); cursor: pointer;
+            font-size: 16px; padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .token-toggle:hover { color: var(--text-2); }
+
+        /* ─── Toggle Switch ─── */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+        }
+
+        .toggle-row:last-child { margin-bottom: 0; }
+
+        .toggle-info .toggle-name {
+            font-size: 13px; font-weight: 500; color: var(--text-1);
+        }
+
+        .toggle-info .toggle-desc {
+            font-size: 11px; color: var(--text-3); margin-top: 1px;
+        }
+
+        .switch {
+            position: relative; width: 40px; height: 22px; cursor: pointer; flex-shrink: 0;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+
+        .switch-track {
+            position: absolute; inset: 0;
+            background: var(--border);
+            border-radius: 11px;
+            transition: 0.25s;
+        }
+
+        .switch-track::before {
+            content: '';
+            position: absolute;
+            width: 16px; height: 16px;
+            left: 3px; top: 3px;
+            background: var(--text-2);
+            border-radius: 50%;
+            transition: 0.25s;
+        }
+
+        .switch input:checked + .switch-track {
+            background: var(--accent);
+        }
+
+        .switch input:checked + .switch-track::before {
+            transform: translateX(18px);
+            background: white;
+        }
+
+        /* ─── Buttons ─── */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 13px 20px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px; font-weight: 600;
+            border: none; border-radius: var(--radius);
+            cursor: pointer; transition: all 0.25s;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-accent {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: white;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-accent:hover {
+            box-shadow: 0 6px 30px rgba(124, 58, 237, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-accent:active { transform: translateY(0); }
+
+        .btn-accent:disabled {
+            opacity: 0.5; cursor: not-allowed; transform: none;
+            box-shadow: none;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-2);
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--accent); color: var(--accent-light);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* ─── Timer Preview Card ─── */
+        .preview-card {
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px 24px;
+            text-align: center;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-card::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(124, 58, 237, 0.08), transparent 70%);
+            pointer-events: none;
+        }
+
+        .preview-timer {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 64px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #c4b5fd, #ffffff, #93c5fd);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 4s linear infinite;
+            letter-spacing: 3px;
+            line-height: 1;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+
+        .preview-label {
+            font-size: 12px; color: var(--text-3);
+            text-transform: uppercase; letter-spacing: 3px;
+            margin-top: 10px;
+        }
+
+        /* ─── Status ─── */
+        .status-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px; font-weight: 500;
+            margin-bottom: 20px;
+        }
+
+        .status-pill .dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-pill.off {
+            background: rgba(94, 94, 128, 0.15); color: var(--text-3);
+        }
+
+        .status-pill.connecting {
+            background: rgba(245, 158, 11, 0.12); color: var(--warning);
+        }
+
+        .status-pill.connecting .dot { animation: blink 1s ease infinite; }
+
+        .status-pill.live {
+            background: rgba(16, 185, 129, 0.12); color: var(--success);
+        }
+
+        .status-pill.live .dot { animation: blink 2s ease infinite; }
+
+        .status-pill.error {
+            background: rgba(239, 68, 68, 0.12); color: var(--danger);
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+        }
+
+        /* ─── OBS URL Box ─── */
+        .url-card {
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin-bottom: 24px;
+        }
+
+        .url-card h3 {
+            font-size: 13px; font-weight: 600; color: var(--text-2);
+            margin-bottom: 10px;
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        .url-card p {
+            font-size: 11px; color: var(--text-3); margin-bottom: 10px;
+        }
+
+        .url-row {
+            display: flex; gap: 8px;
+        }
+
+        .url-row input {
+            flex: 1;
+            padding: 9px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            background: var(--bg-0);
+            color: var(--text-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            outline: none;
+        }
+
+        .url-row button {
+            padding: 9px 16px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px; font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .url-row button:hover { background: var(--accent-2); }
+
+        /* ─── Activity Log ─── */
+        .log-card {
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .log-card h3 {
+            font-size: 13px; font-weight: 600; color: var(--text-2);
+            margin-bottom: 12px;
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        .log-list {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 240px;
+        }
+
+        .log-list::-webkit-scrollbar { width: 3px; }
+        .log-list::-webkit-scrollbar-track { background: transparent; }
+        .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        .log-item {
+            display: flex; align-items: flex-start; gap: 8px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            margin-bottom: 3px;
+            font-size: 12px;
+            animation: logSlide 0.3s ease;
+        }
+
+        @keyframes logSlide {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .log-item.tip {
+            background: rgba(124, 58, 237, 0.08);
+            border-left: 2px solid var(--accent);
+        }
+
+        .log-item.sys {
+            background: rgba(94, 94, 128, 0.06);
+            border-left: 2px solid var(--text-3);
+        }
+
+        .log-item .lt { color: var(--text-3); font-family: 'JetBrains Mono', monospace; font-size: 10px; white-space: nowrap; }
+        .log-item .lm { color: var(--text-2); }
+        .log-item .lm strong { color: var(--text-1); font-weight: 600; }
+
+        .log-empty {
+            text-align: center; padding: 40px 20px; color: var(--text-3); font-size: 13px;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 900px) {
+            .shell {
+                grid-template-columns: 1fr;
+            }
+
+            .panel-config {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                max-height: none;
+            }
+
+            .panel-preview {
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .panel-config, .panel-preview {
+                padding: 28px 18px;
+            }
+
+            .preview-timer { font-size: 44px; }
+            .field-row { grid-template-columns: 1fr; }
+            .field-row-3 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-noise"></div>
+    <div class="bg-grid"></div>
+
+    <div class="shell">
+        <!-- ═══════ LEFT: Config Panel ═══════ -->
+        <div class="panel-config">
+            <div class="logo-row">
+                <div class="logo-icon">⏱️</div>
+                <div class="logo-text">
+                    <h1>Marathon Timer</h1>
+                    <p>StreamElements · OBS Overlay</p>
+                </div>
+            </div>
+
+            <!-- StreamElements Credentials -->
+            <div class="section">
+                <div class="section-label">StreamElements</div>
+
+                <div class="field">
+                    <label for="se-id">Channel ID</label>
+                    <input type="text" id="se-id" placeholder="e.g. 5f4e3d2c1b0a9876…" spellcheck="false" autocomplete="off">
+                    <div class="hint">Dashboard → Account → Channels</div>
+                </div>
+
+                <div class="field">
+                    <label for="se-token">JWT Token</label>
+                    <div class="token-wrapper">
+                        <input type="password" id="se-token" placeholder="eyJhbGciOiJIUz…" spellcheck="false" autocomplete="off">
+                        <button type="button" class="token-toggle" id="token-toggle" onclick="toggleTokenVisibility()">👁</button>
+                    </div>
+                    <div class="hint">Dashboard → Account → Show Secrets</div>
+                </div>
+            </div>
+
+            <!-- Timer Configuration -->
+            <div class="section">
+                <div class="section-label">Timer Configuration</div>
+
+                <div class="field-row">
+                    <div class="field">
+                        <label for="tip-amount">Tip Amount (₹)</label>
+                        <input type="number" id="tip-amount" value="10000" min="1">
+                        <div class="hint">Amount that equals 1 unit of time</div>
+                    </div>
+                    <div class="field">
+                        <label for="time-per-tip">Time per Tip</label>
+                        <select id="time-per-tip">
+                            <option value="3600" selected>1 Hour</option>
+                            <option value="1800">30 Minutes</option>
+                            <option value="900">15 Minutes</option>
+                            <option value="600">10 Minutes</option>
+                            <option value="300">5 Minutes</option>
+                            <option value="60">1 Minute</option>
+                        </select>
+                        <div class="hint">Time added per tip threshold</div>
+                    </div>
+                </div>
+
+                <div class="field-row-3" style="margin-top: 16px;">
+                    <div class="field">
+                        <label for="start-hours">Start Hours</label>
+                        <input type="number" id="start-hours" value="1" min="0" step="1">
+                    </div>
+                    <div class="field">
+                        <label for="start-minutes">Start Minutes</label>
+                        <input type="number" id="start-minutes" value="0" min="0" max="59" step="1">
+                    </div>
+                    <div class="field">
+                        <label for="start-seconds">Start Seconds</label>
+                        <input type="number" id="start-seconds" value="0" min="0" max="59" step="1">
+                    </div>
+                </div>
+                <div class="hint" style="margin-top: 4px;">Initial countdown time when the marathon starts</div>
+            </div>
+
+            <!-- Advanced Options -->
+            <div class="section">
+                <div class="section-label">Advanced</div>
+
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-name">Proportional Tips</div>
+                        <div class="toggle-desc">₹5,000 → 30 min if threshold is ₹10,000/1H</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="opt-proportional" checked>
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
+
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-name">Stack Tips</div>
+                        <div class="toggle-desc">₹20,000 → 2 hours if threshold is ₹10,000/1H</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="opt-stack" checked>
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
+
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-name">Count Up After Zero</div>
+                        <div class="toggle-desc">Timer goes negative instead of stopping at 00:00:00</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="opt-countup">
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Start Button -->
+            <button class="btn btn-accent" id="btn-start" onclick="startMarathon()">
+                🚀 Start Marathon
+            </button>
+            <div id="validation-error" style="color: var(--danger); font-size: 12px; margin-top: 8px; text-align: center; display: none;"></div>
+        </div>
+
+        <!-- ═══════ RIGHT: Preview Panel ═══════ -->
+        <div class="panel-preview">
+            <!-- Status -->
+            <div style="text-align: center;">
+                <div class="status-pill off" id="status-pill">
+                    <span class="dot"></span>
+                    <span id="status-text">Not Running</span>
+                </div>
+            </div>
+
+            <!-- Timer Preview -->
+            <div class="preview-card">
+                <div class="preview-timer" id="timer-display">00:00:00</div>
+                <div class="preview-label">Time Remaining</div>
+            </div>
+
+            <!-- Quick Controls (shown when running) -->
+            <div id="controls" style="display: none;">
+                <div class="btn-group" style="margin-bottom: 16px;">
+                    <button class="btn btn-outline" onclick="manualAdd(3600)">+ 1 Hour</button>
+                    <button class="btn btn-outline" onclick="manualAdd(600)">+ 10 Min</button>
+                </div>
+                <div class="btn-group" style="margin-bottom: 24px;">
+                    <button class="btn btn-outline" onclick="manualAdd(-600)">− 10 Min</button>
+                    <button class="btn btn-danger" onclick="stopMarathon()">⏹ Stop Marathon</button>
+                </div>
+            </div>
+
+            <!-- OBS URL -->
+            <div class="url-card" id="obs-section" style="display: none;">
+                <h3>🖥️ OBS Browser Source URL</h3>
+                <p>Add this as a Browser Source in OBS. Recommended: <strong>800 × 200</strong>.</p>
+                <div class="url-row">
+                    <input type="text" id="obs-url" readonly>
+                    <button onclick="copyUrl()">Copy</button>
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="log-card">
+                <h3>📋 Activity Log</h3>
+                <div class="log-list" id="log-list">
+                    <div class="log-empty" id="log-empty">Configure settings and start the marathon</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ════════════════════════════════════════════════════
+    //  STATE
+    // ════════════════════════════════════════════════════
+    let ws = null;
+    let timerInterval = null;
+    let remainingSeconds = 0;
+    let running = false;
+    let config = {};
+    let logs = [];
+
+    // ════════════════════════════════════════════════════
+    //  PERSIST CONFIG
+    // ════════════════════════════════════════════════════
+    const STORAGE_KEY = 'marathon_v2';
+
+    function loadSaved() {
+        try {
+            const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            if (d.channelId) document.getElementById('se-id').value = d.channelId;
+            if (d.token) document.getElementById('se-token').value = d.token;
+            if (d.tipAmount) document.getElementById('tip-amount').value = d.tipAmount;
+            if (d.timePer) document.getElementById('time-per-tip').value = d.timePer;
+            if (d.startH != null) document.getElementById('start-hours').value = d.startH;
+            if (d.startM != null) document.getElementById('start-minutes').value = d.startM;
+            if (d.startS != null) document.getElementById('start-seconds').value = d.startS;
+            if (d.proportional != null) document.getElementById('opt-proportional').checked = d.proportional;
+            if (d.stack != null) document.getElementById('opt-stack').checked = d.stack;
+            if (d.countup != null) document.getElementById('opt-countup').checked = d.countup;
+        } catch {}
+    }
+
+    function saveConfig() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            channelId: config.channelId,
+            token: config.token,
+            tipAmount: config.tipAmount,
+            timePer: config.timePer,
+            startH: config.startH,
+            startM: config.startM,
+            startS: config.startS,
+            proportional: config.proportional,
+            stack: config.stack,
+            countup: config.countup,
+        }));
+    }
+
+    function saveTimerState() {
+        localStorage.setItem('marathon_timer_state', JSON.stringify({
+            remainingSeconds,
+            timestamp: Date.now(),
+            running,
+            config
+        }));
+    }
+
+    // ════════════════════════════════════════════════════
+    //  START
+    // ════════════════════════════════════════════════════
+    function startMarathon() {
+        const channelId = document.getElementById('se-id').value.trim();
+        const token = document.getElementById('se-token').value.trim();
+        const errEl = document.getElementById('validation-error');
+
+        if (!channelId) {
+            showError('Please enter your StreamElements Channel ID');
+            document.getElementById('se-id').focus();
+            return;
+        }
+        if (!token) {
+            showError('Please enter your StreamElements JWT Token');
+            document.getElementById('se-token').focus();
+            return;
+        }
+
+        errEl.style.display = 'none';
+
+        config = {
+            channelId,
+            token,
+            tipAmount: parseFloat(document.getElementById('tip-amount').value) || 10000,
+            timePer: parseInt(document.getElementById('time-per-tip').value) || 3600,
+            startH: parseInt(document.getElementById('start-hours').value) || 0,
+            startM: parseInt(document.getElementById('start-minutes').value) || 0,
+            startS: parseInt(document.getElementById('start-seconds').value) || 0,
+            proportional: document.getElementById('opt-proportional').checked,
+            stack: document.getElementById('opt-stack').checked,
+            countup: document.getElementById('opt-countup').checked,
+        };
+
+        saveConfig();
+
+        remainingSeconds = config.startH * 3600 + config.startM * 60 + config.startS;
+        running = true;
+
+        saveTimerState();
+        buildOverlayUrl();
+        updateDisplay();
+        startCountdown();
+        connectSE();
+
+        // UI
+        document.getElementById('controls').style.display = 'block';
+        document.getElementById('obs-section').style.display = 'block';
+        document.getElementById('btn-start').disabled = true;
+        document.getElementById('btn-start').textContent = '✅ Marathon Running';
+
+        addLog('sys', `Marathon started — ${formatTime(remainingSeconds)}`);
+    }
+
+    // ════════════════════════════════════════════════════
+    //  STOP
+    // ════════════════════════════════════════════════════
+    function stopMarathon() {
+        if (!confirm('Stop the marathon timer?')) return;
+
+        running = false;
+        if (ws) { ws.close(); ws = null; }
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+
+        saveTimerState();
+        updateStatus('off', 'Stopped');
+
+        document.getElementById('controls').style.display = 'none';
+        document.getElementById('btn-start').disabled = false;
+        document.getElementById('btn-start').textContent = '🚀 Start Marathon';
+
+        addLog('sys', 'Marathon stopped');
+    }
+
+    // ════════════════════════════════════════════════════
+    //  COUNTDOWN
+    // ════════════════════════════════════════════════════
+    function startCountdown() {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if (remainingSeconds > 0) {
+                remainingSeconds--;
+            } else if (!config.countup) {
+                // Timer ended
+                clearInterval(timerInterval);
+                timerInterval = null;
+                addLog('sys', '⏰ Timer reached zero!');
+            } else {
+                remainingSeconds--;
+            }
+            updateDisplay();
+            saveTimerState();
+        }, 1000);
+    }
+
+    function updateDisplay() {
+        document.getElementById('timer-display').textContent = formatTime(remainingSeconds);
+    }
+
+    function formatTime(sec) {
+        const negative = sec < 0;
+        const abs = Math.abs(sec);
+        const h = Math.floor(abs / 3600);
+        const m = Math.floor((abs % 3600) / 60);
+        const s = abs % 60;
+        const str = `${pad(h)}:${pad(m)}:${pad(s)}`;
+        return negative ? `-${str}` : str;
+    }
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function manualAdd(sec) {
+        remainingSeconds += sec;
+        updateDisplay();
+        saveTimerState();
+
+        const label = sec > 0 ? `+${friendlyDur(sec)}` : `-${friendlyDur(Math.abs(sec))}`;
+        addLog('sys', `Manually adjusted: ${label}`);
+
+        if (sec > 0 && !timerInterval && running) {
+            startCountdown();
+        }
+    }
+
+    function friendlyDur(sec) {
+        if (sec >= 3600) {
+            const h = Math.floor(sec / 3600);
+            const m = Math.floor((sec % 3600) / 60);
+            return m > 0 ? `${h}h ${m}m` : `${h}h`;
+        }
+        if (sec >= 60) return `${Math.floor(sec / 60)}m`;
+        return `${sec}s`;
+    }
+
+    // ════════════════════════════════════════════════════
+    //  STREAMELEMENTS WEBSOCKET
+    // ════════════════════════════════════════════════════
+    function connectSE() {
+        updateStatus('connecting', 'Connecting…');
+
+        ws = new WebSocket('wss://astro.streamelements.com');
+
+        ws.onopen = () => {
+            addLog('sys', 'WebSocket connected');
+        };
+
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+
+                if (msg.type === 'welcome') {
+                    updateStatus('live', 'Connected — Listening');
+                    addLog('sys', 'Authenticated ✓');
+
+                    ws.send(JSON.stringify({
+                        type: 'subscribe',
+                        nonce: 'tips_' + Date.now(),
+                        data: {
+                            topic: 'channel.tips',
+                            room: config.channelId,
+                            token: config.token,
+                            token_type: 'jwt'
+                        }
+                    }));
+
+                    ws.send(JSON.stringify({
+                        type: 'subscribe',
+                        nonce: 'act_' + Date.now(),
+                        data: {
+                            topic: 'channel.activities',
+                            room: config.channelId,
+                            token: config.token,
+                            token_type: 'jwt'
+                        }
+                    }));
+                }
+
+                if (msg.type === 'response' && msg.data?.success) {
+                    addLog('sys', `Subscribed to ${msg.data.topic || 'events'}`);
+                }
+
+                if (msg.type === 'message') {
+                    handleTipEvent(msg);
+                }
+            } catch (err) {
+                console.error('WS parse error:', err);
+            }
+        };
+
+        ws.onerror = () => {
+            updateStatus('error', 'Connection Error');
+            addLog('sys', '❌ WebSocket error');
+        };
+
+        ws.onclose = () => {
+            if (!running) return;
+            updateStatus('connecting', 'Reconnecting…');
+            addLog('sys', '🔌 Disconnected — retrying in 5s');
+            setTimeout(() => { if (running) connectSE(); }, 5000);
+        };
+    }
+
+    function handleTipEvent(msg) {
+        const d = msg.data;
+        if (!d) return;
+
+        let amount = 0, name = 'Anonymous';
+
+        if (msg.topic === 'channel.tips') {
+            amount = d.amount || d.data?.amount || 0;
+            name = d.displayName || d.username || d.data?.displayName || d.data?.username || 'Anonymous';
+        }
+
+        if (msg.topic === 'channel.activities' && d.type === 'tip') {
+            amount = d.data?.amount || 0;
+            name = d.data?.displayName || d.data?.username || 'Anonymous';
+        }
+
+        if (amount <= 0) return;
+
+        let addSec = 0;
+
+        if (config.proportional) {
+            addSec = Math.floor((amount / config.tipAmount) * config.timePer);
+        } else if (config.stack) {
+            addSec = Math.floor(amount / config.tipAmount) * config.timePer;
+        } else {
+            if (amount >= config.tipAmount) addSec = config.timePer;
+        }
+
+        if (addSec > 0) {
+            remainingSeconds += addSec;
+            updateDisplay();
+            saveTimerState();
+
+            if (!timerInterval && running) startCountdown();
+
+            addLog('tip', `<strong>${esc(name)}</strong> tipped ₹${amount.toLocaleString()} → +${friendlyDur(addSec)}`);
+        } else {
+            addLog('tip', `<strong>${esc(name)}</strong> tipped ₹${amount.toLocaleString()} (below threshold)`);
+        }
+    }
+
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    // ════════════════════════════════════════════════════
+    //  OBS URL
+    // ════════════════════════════════════════════════════
+    function buildOverlayUrl() {
+        const base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '');
+        const params = new URLSearchParams({
+            id: config.channelId,
+            token: config.token,
+            amount: config.tipAmount,
+            time: config.timePer,
+            prop: config.proportional ? '1' : '0',
+            stack: config.stack ? '1' : '0',
+            countup: config.countup ? '1' : '0',
+        });
+        const url = `${base}/overlay.html?${params.toString()}`;
+        document.getElementById('obs-url').value = url;
+    }
+
+    function copyUrl() {
+        const inp = document.getElementById('obs-url');
+        navigator.clipboard.writeText(inp.value).then(() => {
+            const btn = inp.nextElementSibling;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        });
+    }
+
+    // ════════════════════════════════════════════════════
+    //  STATUS
+    // ════════════════════════════════════════════════════
+    function updateStatus(cls, text) {
+        const pill = document.getElementById('status-pill');
+        pill.className = 'status-pill ' + cls;
+        document.getElementById('status-text').textContent = text;
+    }
+
+    // ════════════════════════════════════════════════════
+    //  LOG
+    // ════════════════════════════════════════════════════
+    function addLog(type, html) {
+        const t = new Date().toLocaleTimeString('en-US', { hour12: false });
+        logs.unshift({ type, html, t });
+        if (logs.length > 100) logs.pop();
+        renderLog();
+    }
+
+    function renderLog() {
+        const el = document.getElementById('log-list');
+        const empty = document.getElementById('log-empty');
+        if (empty) empty.remove();
+
+        el.innerHTML = logs.map(l => `
+            <div class="log-item ${l.type}">
+                <span class="lt">${l.t}</span>
+                <span class="lm">${l.html}</span>
+            </div>
+        `).join('');
+    }
+
+    // ════════════════════════════════════════════════════
+    //  HELPERS
+    // ════════════════════════════════════════════════════
+    function showError(msg) {
+        const el = document.getElementById('validation-error');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    function toggleTokenVisibility() {
+        const inp = document.getElementById('se-token');
+        const btn = document.getElementById('token-toggle');
+        if (inp.type === 'password') {
+            inp.type = 'text';
+            btn.textContent = '🙈';
+        } else {
+            inp.type = 'password';
+            btn.textContent = '👁';
+        }
+    }
+
+    // ════════════════════════════════════════════════════
+    //  INIT
+    // ════════════════════════════════════════════════════
+    loadSaved();
+    </script>
+</body>
+</html>

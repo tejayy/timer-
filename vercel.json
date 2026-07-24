@@ -1,0 +1,21 @@
+{
+    "version": 2,
+    "public": true,
+    "cleanUrls": true,
+    "headers": [
+        {
+            "source": "/overlay.html",
+            "headers": [
+                { "key": "Access-Control-Allow-Origin", "value": "*" },
+                { "key": "X-Frame-Options", "value": "ALLOWALL" }
+            ]
+        },
+        {
+            "source": "/(.*)",
+            "headers": [
+                { "key": "X-Content-Type-Options", "value": "nosniff" },
+                { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+            ]
+        }
+    ]
+}

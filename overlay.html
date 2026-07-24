@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marathon Timer — OBS Overlay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: transparent;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* ─── Timer Container ─── */
+        .timer-box {
+            position: relative;
+            padding: 18px 52px;
+            border-radius: 16px;
+            background: rgba(10, 10, 20, 0.88);
+            border: 2px solid rgba(124, 58, 237, 0.5);
+            box-shadow:
+                0 0 40px rgba(124, 58, 237, 0.2),
+                0 0 80px rgba(124, 58, 237, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        /* Animated gradient outline */
+        .timer-box::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #7c3aed, #3b82f6, #7c3aed, #3b82f6);
+            background-size: 300% 300%;
+            animation: gradientShift 4s ease infinite;
+            z-index: -1;
+            opacity: 0.75;
+        }
+
+        .timer-box::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 16px;
+            background: rgba(10, 10, 20, 0.92);
+            z-index: -1;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* ─── Timer Digits ─── */
+        .timer-digits {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 72px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            line-height: 1;
+            background: linear-gradient(135deg, #c4b5fd, #ffffff, #93c5fd);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textShimmer 4s linear infinite;
+            filter: drop-shadow(0 0 18px rgba(124, 58, 237, 0.35));
+        }
+
+        @keyframes textShimmer {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+
+        .timer-digits .sep {
+            animation: colonBlink 1s step-end infinite;
+        }
+
+        @keyframes colonBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* negative timer */
+        .timer-digits.negative {
+            background: linear-gradient(135deg, #fca5a5, #ffffff, #fcd34d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 18px rgba(239, 68, 68, 0.35));
+        }
+
+        /* ─── Label ─── */
+        .timer-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: rgba(124, 58, 237, 0.75);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-align: center;
+        }
+
+        /* ─── Ended State ─── */
+        .timer-box.ended::before {
+            background: linear-gradient(135deg, #ef4444, #f59e0b, #ef4444, #f59e0b);
+            background-size: 300% 300%;
+        }
+
+        .timer-box.ended {
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow:
+                0 0 40px rgba(239, 68, 68, 0.2),
+                0 0 80px rgba(239, 68, 68, 0.08);
+        }
+
+        /* ─── Tip Popup ─── */
+        .tip-popup {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 14px 36px;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.95), rgba(109, 40, 217, 0.95));
+            color: white;
+            font-size: 26px;
+            font-weight: 700;
+            border-radius: 14px;
+            box-shadow: 0 0 60px rgba(124, 58, 237, 0.5);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        .tip-popup.show {
+            animation: popIn 3s ease forwards;
+        }
+
+        @keyframes popIn {
+            0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            10%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            20%  { transform: translate(-50%, -50%) scale(1); }
+            80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -70%) scale(0.85); }
+        }
+
+        /* ─── Particles ─── */
+        .particle {
+            position: fixed;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        @keyframes fly {
+            0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+        }
+
+        /* ─── Error State ─── */
+        .error-msg {
+            position: fixed;
+            bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 20px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            font-size: 13px;
+            border-radius: 8px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay">
+        <div class="timer-box" id="timer-box">
+            <div class="timer-digits" id="timer-digits">
+                00<span class="sep">:</span>00<span class="sep">:</span>00
+            </div>
+        </div>
+        <div class="timer-label">Marathon Timer</div>
+    </div>
+
+    <div class="tip-popup" id="tip-popup"></div>
+    <div class="error-msg" id="error-msg"></div>
+
+    <script>
+    // ════════════════════════════════════════════
+    //  CONFIG: reads from URL params OR localStorage
+    // ════════════════════════════════════════════
+    const params = new URLSearchParams(window.location.search);
+    let config = {};
+    let ws = null;
+    let remainingSeconds = 0;
+    let countInterval = null;
+    let running = false;
+
+    function loadConfig() {
+        // Priority 1: URL params (for Vercel / OBS browser source)
+        if (params.has('id') && params.has('token')) {
+            config = {
+                channelId: params.get('id'),
+                token: params.get('token'),
+                tipAmount: parseFloat(params.get('amount')) || 10000,
+                timePer: parseInt(params.get('time')) || 3600,
+                proportional: params.get('prop') !== '0',
+                stack: params.get('stack') !== '0',
+                countup: params.get('countup') === '1',
+            };
+            return true;
+        }
+
+        // Priority 2: localStorage (same-origin fallback)
+        try {
+            const saved = JSON.parse(localStorage.getItem('marathon_v2') || '{}');
+            if (saved.channelId && saved.token) {
+                config = {
+                    channelId: saved.channelId,
+                    token: saved.token,
+                    tipAmount: saved.tipAmount || 10000,
+                    timePer: saved.timePer || 3600,
+                    proportional: saved.proportional !== false,
+                    stack: saved.stack !== false,
+                    countup: saved.countup || false,
+                };
+                return true;
+            }
+        } catch {}
+
+        return false;
+    }
+
+    // ════════════════════════════════════════════
+    //  TIMER STATE: sync from localStorage
+    // ════════════════════════════════════════════
+    function loadTimerState() {
+        try {
+            const s = JSON.parse(localStorage.getItem('marathon_timer_state') || '{}');
+            if (s.remainingSeconds != null && s.timestamp) {
+                const elapsed = Math.floor((Date.now() - s.timestamp) / 1000);
+                remainingSeconds = s.remainingSeconds - elapsed;
+                running = s.running !== false;
+                if (!config.countup && remainingSeconds < 0) remainingSeconds = 0;
+                return true;
+            }
+        } catch {}
+        return false;
+    }
+
+    function syncFromStorage() {
+        try {
+            const s = JSON.parse(localStorage.getItem('marathon_timer_state') || '{}');
+            if (s.remainingSeconds != null && s.timestamp) {
+                const elapsed = Math.floor((Date.now() - s.timestamp) / 1000);
+                const newVal = s.remainingSeconds - elapsed;
+                running = s.running !== false;
+
+                // Detect if time was added (tip came in)
+                if (newVal > remainingSeconds + 2) {
+                    const added = newVal - remainingSeconds;
+                    showTipPopup(added);
+                }
+
+                remainingSeconds = newVal;
+                if (!config.countup && remainingSeconds < 0) remainingSeconds = 0;
+            }
+        } catch {}
+    }
+
+    // ════════════════════════════════════════════
+    //  DISPLAY
+    // ════════════════════════════════════════════
+    function render() {
+        const neg = remainingSeconds < 0;
+        const abs = Math.abs(remainingSeconds);
+        const h = Math.floor(abs / 3600);
+        const m = Math.floor((abs % 3600) / 60);
+        const s = abs % 60;
+
+        const el = document.getElementById('timer-digits');
+        const sign = neg ? '-' : '';
+        el.innerHTML = `${sign}${pad(h)}<span class="sep">:</span>${pad(m)}<span class="sep">:</span>${pad(s)}`;
+        el.className = 'timer-digits' + (neg ? ' negative' : '');
+
+        const box = document.getElementById('timer-box');
+        if (remainingSeconds <= 0 && !config.countup) {
+            box.classList.add('ended');
+        } else {
+            box.classList.remove('ended');
+        }
+    }
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    // ════════════════════════════════════════════
+    //  COUNTDOWN
+    // ════════════════════════════════════════════
+    function startCountdown() {
+        if (countInterval) clearInterval(countInterval);
+
+        countInterval = setInterval(() => {
+            // Sync from localStorage every tick
+            syncFromStorage();
+
+            if (running) {
+                if (remainingSeconds > 0) {
+                    // Normal countdown handled by sync
+                } else if (!config.countup) {
+                    // Stopped at zero — still sync
+                }
+            }
+
+            render();
+        }, 1000);
+    }
+
+    // ════════════════════════════════════════════
+    //  STREAMELEMENTS WEBSOCKET
+    // ════════════════════════════════════════════
+    function connectSE() {
+        if (!config.channelId || !config.token) return;
+
+        ws = new WebSocket('wss://astro.streamelements.com');
+
+        ws.onopen = () => console.log('[Overlay] WS connected');
+
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+
+                if (msg.type === 'welcome') {
+                    console.log('[Overlay] Authenticated');
+
+                    ws.send(JSON.stringify({
+                        type: 'subscribe',
+                        nonce: 'ov_tips_' + Date.now(),
+                        data: {
+                            topic: 'channel.tips',
+                            room: config.channelId,
+                            token: config.token,
+                            token_type: 'jwt'
+                        }
+                    }));
+
+                    ws.send(JSON.stringify({
+                        type: 'subscribe',
+                        nonce: 'ov_act_' + Date.now(),
+                        data: {
+                            topic: 'channel.activities',
+                            room: config.channelId,
+                            token: config.token,
+                            token_type: 'jwt'
+                        }
+                    }));
+                }
+
+                if (msg.type === 'message') {
+                    handleTip(msg);
+                }
+            } catch (err) {
+                console.error('[Overlay] WS parse error:', err);
+            }
+        };
+
+        ws.onerror = () => {
+            console.error('[Overlay] WS error');
+        };
+
+        ws.onclose = () => {
+            console.log('[Overlay] WS closed — reconnecting in 5s');
+            setTimeout(() => connectSE(), 5000);
+        };
+    }
+
+    function handleTip(msg) {
+        const d = msg.data;
+        if (!d) return;
+
+        let amount = 0;
+
+        if (msg.topic === 'channel.tips') {
+            amount = d.amount || d.data?.amount || 0;
+        }
+
+        if (msg.topic === 'channel.activities' && d.type === 'tip') {
+            amount = d.data?.amount || 0;
+        }
+
+        if (amount <= 0) return;
+
+        let addSec = 0;
+
+        if (config.proportional) {
+            addSec = Math.floor((amount / config.tipAmount) * config.timePer);
+        } else if (config.stack) {
+            addSec = Math.floor(amount / config.tipAmount) * config.timePer;
+        } else {
+            if (amount >= config.tipAmount) addSec = config.timePer;
+        }
+
+        if (addSec > 0) {
+            remainingSeconds += addSec;
+            render();
+            showTipPopup(addSec);
+        }
+    }
+
+    // ════════════════════════════════════════════
+    //  TIP ANIMATION
+    // ════════════════════════════════════════════
+    function showTipPopup(sec) {
+        const el = document.getElementById('tip-popup');
+        el.textContent = `+${friendlyDur(sec)} Added! 🎉`;
+        el.classList.remove('show');
+        void el.offsetWidth;
+        el.classList.add('show');
+        spawnParticles();
+        setTimeout(() => el.classList.remove('show'), 3200);
+    }
+
+    function friendlyDur(sec) {
+        if (sec >= 3600) {
+            const h = Math.floor(sec / 3600);
+            const m = Math.floor((sec % 3600) / 60);
+            return m > 0 ? `${h}h ${m}m` : `${h} Hour${h > 1 ? 's' : ''}`;
+        }
+        if (sec >= 60) return `${Math.floor(sec / 60)} Min`;
+        return `${sec}s`;
+    }
+
+    function spawnParticles() {
+        const colors = ['#7c3aed', '#3b82f6', '#c4b5fd', '#93c5fd', '#f59e0b', '#10b981', '#a78bfa'];
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+
+        for (let i = 0; i < 24; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = cx + 'px';
+            p.style.top = cy + 'px';
+            p.style.background = colors[Math.floor(Math.random() * colors.length)];
+            p.style.width = (4 + Math.random() * 4) + 'px';
+            p.style.height = p.style.width;
+
+            const angle = (Math.PI * 2 * i) / 24 + (Math.random() - 0.5) * 0.5;
+            const dist = 80 + Math.random() * 140;
+            p.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+            p.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+            p.style.animation = `fly ${0.7 + Math.random() * 0.6}s ease-out forwards`;
+
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 1400);
+        }
+    }
+
+    // ════════════════════════════════════════════
+    //  ERROR DISPLAY
+    // ════════════════════════════════════════════
+    function showError(msg) {
+        const el = document.getElementById('error-msg');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    // ════════════════════════════════════════════
+    //  INIT
+    // ════════════════════════════════════════════
+    const hasConfig = loadConfig();
+    loadTimerState();
+    render();
+    startCountdown();
+
+    if (hasConfig) {
+        connectSE();
+    } else {
+        showError('No config found. Open the config page and start the marathon first.');
+    }
+    </script>
+</body>
+</html>
