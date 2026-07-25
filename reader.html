@@ -440,7 +440,7 @@
   async function fetchHistory() {
     if (!channelId || !token) return;
     try {
-      const res = await fetch(`https://api.streamelements.com/kappa/v2/activities/${channelId}?limit=100&types=tip`, {
+      const res = await fetch(`https://api.streamelements.com/kappa/v2/activities/${channelId}?limit=100&types=tip,superchat`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();
@@ -449,7 +449,7 @@
       let added = false;
       // Reverse to add oldest first so unshift puts newest at the top
       arr.reverse().forEach(act => {
-        if (act.type === 'tip') {
+        if (act.type === 'tip' || act.type === 'superchat') {
           const data = act.data || {};
           const amount = data.amount || 0;
           if (amount <= 0) return;
@@ -460,8 +460,9 @@
             const message = data.message || '';
             const currency = data.currency || 'INR';
             const ts = act.createdAt ? new Date(act.createdAt).getTime() : Date.now();
+            const type = act.type === 'tip' ? 'st' : 'sc';
             
-            items.unshift({ _id, type: 'st', name, amount, message, currency, ts });
+            items.unshift({ _id, type, name, amount, message, currency, ts });
             added = true;
           }
         }
@@ -540,8 +541,9 @@
 
       if (type === 'tip') {
         addItem({ _id, type: 'st', name, amount, message, currency, ts: Date.now() });
+      } else if (type === 'superchat') {
+        addItem({ _id, type: 'sc', name, amount, message, currency, ts: Date.now() });
       }
-      // Ignored superchats for now
     } else if (msg.topic === 'channel.tips') {
       const data = d.data || d || {};
       const amount = data.amount || 0;
