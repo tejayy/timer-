@@ -573,11 +573,16 @@
             <div class="section">
                 <div class="section-label">Timer Configuration</div>
 
-                <div class="field-row">
+                <div class="field-row-3">
                     <div class="field">
                         <label for="tip-amount">Tip Amount (₹)</label>
                         <input type="number" id="tip-amount" value="10000" min="1">
-                        <div class="hint">Amount that equals 1 unit of time</div>
+                        <div class="hint">Starting goal amount</div>
+                    </div>
+                    <div class="field">
+                        <label for="goal-increment">Goal Increment</label>
+                        <input type="number" id="goal-increment" value="1000" min="0">
+                        <div class="hint">Added to goal after each hit</div>
                     </div>
                     <div class="field">
                         <label for="time-per-tip">Time per Tip</label>
@@ -589,7 +594,7 @@
                             <option value="300">5 Minutes</option>
                             <option value="60">1 Minute</option>
                         </select>
-                        <div class="hint">Time added per tip threshold</div>
+                        <div class="hint">Time added per hit</div>
                     </div>
                 </div>
 
@@ -713,6 +718,7 @@
             if (d.channelId) document.getElementById('se-id').value = d.channelId;
             if (d.token) document.getElementById('se-token').value = d.token;
             if (d.goal) document.getElementById('tip-amount').value = d.goal;
+            if (d.goalInc != null) document.getElementById('goal-increment').value = d.goalInc;
             if (d.timePer) document.getElementById('time-per-tip').value = d.timePer;
             if (d.startH != null) document.getElementById('start-hours').value = d.startH;
             if (d.startM != null) document.getElementById('start-minutes').value = d.startM;
@@ -727,6 +733,7 @@
             channelId: config.channelId,
             token: config.token,
             goal: config.goal,
+            goalInc: config.goalInc,
             timePer: config.timePer,
             startH: config.startH,
             startM: config.startM,
@@ -761,6 +768,7 @@
             channelId,
             token,
             goal: parseFloat(document.getElementById('tip-amount').value) || 10000,
+            goalInc: parseFloat(document.getElementById('goal-increment').value) || 1000,
             timePer: parseInt(document.getElementById('time-per-tip').value) || 3600,
             startH: parseInt(document.getElementById('start-hours').value) || 0,
             startM: parseInt(document.getElementById('start-minutes').value) || 0,
@@ -788,6 +796,7 @@
             id: config.channelId,
             token: config.token,
             goal: config.goal,
+            goalInc: config.goalInc,
             timePer: config.timePer,
             startH: config.startH,
             startM: config.startM,

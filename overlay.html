@@ -306,6 +306,7 @@ const CFG = {
   channelId : P.get('id')    || '',
   token     : P.get('token') || '',
   goal      : parseFloat(P.get('goal'))    || 10000,
+  increment : parseFloat(P.get('goalInc')) || 1000,
   timePer   : parseInt(P.get('timePer'))   || 3600,
   startH    : parseInt(P.get('startH'))    || 1,
   startM    : parseInt(P.get('startM'))    || 0,
@@ -332,7 +333,6 @@ const TIME_LABEL = friendlyTimeLabel(TIME_PER);
 
 // Set labels
 document.getElementById('progressTitle').textContent = '+' + TIME_LABEL;
-document.getElementById('goalLabel').textContent = ' / ₹' + GOAL.toLocaleString('en-IN');
 document.getElementById('addBtn').textContent = '+' + TIME_LABEL;
 document.getElementById('remBtn').textContent = '−' + TIME_LABEL;
 
@@ -347,9 +347,10 @@ function loadState() {
       pausedAt:  s.pausedAt  || null,
       remaining: s.remaining != null ? s.remaining : START_SECS,
       collected: s.collected || 0,
+      bonuses:   s.bonuses   || 0,
     };
   } catch {
-    return { endTime:null, pausedAt:null, remaining:START_SECS, collected:0 };
+    return { endTime:null, pausedAt:null, remaining:START_SECS, collected:0, bonuses:0 };
   }
 }
 
@@ -359,11 +360,16 @@ function saveState() {
     pausedAt:  state.pausedAt,
     remaining: state.remaining,
     collected: state.collected,
+    bonuses:   state.bonuses,
   }));
 }
 
 let state = loadState();
 let tickInterval = null;
+
+function getCurrentGoal() {
+  return CFG.goal + (state.bonuses * CFG.increment);
+}
 
 /* ════════════════════════════════════════════════════════
    TIMER LOGIC
@@ -484,11 +490,11 @@ function setFill(pct, animated = true) {
 async function animateAmount(amount) {
   let carry = state.collected + amount;
 
-  if (carry < GOAL) {
+  if (carry < getCurrentGoal()) {
     // Simple gain — no overflow
     state.collected = carry;
     saveState();
-    const pct = (carry / GOAL) * 100;
+    const pct = (carry / getCurrentGoal()) * 100;
     setGhost(pct);
     await delay(160);
     setFill(pct);
@@ -498,9 +504,13 @@ async function animateAmount(amount) {
   }
 
   // Count overflows
-  let bonuses = 0;
+  let newBonuses = 0;
   let rem = carry;
-  while (rem >= GOAL) { rem -= GOAL; bonuses++; }
+  while (rem >= getCurrentGoal()) {
+    rem -= getCurrentGoal();
+    state.bonuses++;
+    newBonuses++;
+  }
 
   // Pink fills to 100%
   setGhost(100);
@@ -513,14 +523,14 @@ async function animateAmount(amount) {
   await delay(400);
 
   // Badge + tick hours
-  showBonus(bonuses);
-  await tickUnits(bonuses);
+  showBonus(newBonuses);
+  await tickUnits(newBonuses);
   await delay(300);
 
   // Reset to remainder
   state.collected = rem;
   saveState();
-  const remPct = (rem / GOAL) * 100;
+  const remPct = (rem / getCurrentGoal()) * 100;
   setGhost(remPct, true);
   setFill(remPct, false);
   updateLabel();
@@ -556,10 +566,11 @@ function showBonus(count = 1) {
 
 function updateLabel() {
   document.getElementById('collected').textContent = '₹' + Math.round(state.collected).toLocaleString('en-IN');
+  document.getElementById('goalLabel').textContent = ' / ₹' + getCurrentGoal().toLocaleString('en-IN');
 }
 
 function updateBar() {
-  const pct = Math.min((state.collected / GOAL) * 100, 100);
+  const pct = Math.min((state.collected / getCurrentGoal()) * 100, 100);
   setGhost(pct, true);
   setFill(pct, false);
   updateLabel();
